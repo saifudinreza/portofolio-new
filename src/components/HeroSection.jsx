@@ -20,6 +20,7 @@ export default function HeroSection() {
   const taglineRef = useRef()
   const descRef    = useRef()
   const ctaRef     = useRef()
+  const statsRef   = useRef()
   const photoRef   = useRef()
 
   useEffect(() => {
@@ -79,6 +80,13 @@ export default function HeroSection() {
       },
       '-=1400',
     )
+    .add({
+      targets: statsRef.current,
+      opacity: [0, 1],
+      translateY: [10, 0],
+      duration: 700,
+      easing: 'easeOutExpo',
+    })
   }, [])
 
   const nameChars = ['S', 'a', 'i', 'f', 'u', 'd', 'i', 'n', ' ', 'R', 'e', 'z', 'a']
@@ -142,8 +150,8 @@ export default function HeroSection() {
               style={{ opacity: 0 }}
               className="text-neutral-400 text-lg leading-relaxed mb-10"
             >
-              Mahasiswa Sistem Informasi yang membangun produk digital nyata —
-              dari REST API hingga UI yang bisa dipakai orang sungguhan.
+              Information Systems student building real-world digital products —
+              from REST APIs to fullstack apps that actual people use.
             </p>
 
             {/* CTA */}
@@ -153,15 +161,40 @@ export default function HeroSection() {
                 style={{ opacity: 0 }}
                 className="px-8 py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg font-medium transition-colors duration-300"
               >
-                Lihat Proyek
+                View Projects
               </a>
               <a
                 href="#contact"
                 style={{ opacity: 0 }}
                 className="px-8 py-3 border border-neutral-700 hover:border-indigo-600 text-neutral-300 hover:text-white rounded-lg font-medium transition-colors duration-300"
               >
-                Hubungi Saya
+                Get In Touch
               </a>
+            </div>
+
+            {/* Stats row */}
+            <div
+              ref={statsRef}
+              style={{ opacity: 0 }}
+              className="flex items-center gap-0 mt-10 pt-8 border-t border-neutral-800/40"
+            >
+              {[
+                { value: '4',   label: 'Live Projects'  },
+                { value: '29+', label: 'Repositories'   },
+                { value: '2+',  label: 'Yrs Coding'     },
+              ].map((stat, i) => (
+                <div key={stat.label} className="flex items-center">
+                  {i > 0 && <div className="w-px h-7 bg-neutral-800 mx-6" />}
+                  <div>
+                    <div className="text-xl font-bold text-white font-mono tracking-tight">
+                      {stat.value}
+                    </div>
+                    <div className="text-neutral-600 text-xs mt-0.5 font-mono">
+                      {stat.label}
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
 

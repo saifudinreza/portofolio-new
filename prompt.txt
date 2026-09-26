@@ -1,0 +1,16 @@
+tolong buatkan saya issue.md, berdasarkan website saya .
+
+yg dimana berisikan tentang : 
+- fixing wasd bug pada drive di mobil ( mobil sering bergerak sendiri walaupun user sudah tidak mencet wasd / controller yg tersedia) 
+- saya ingin menambakan fitur sebagai berikut di 3d world:
+    - 3d grass asset animation yg dimana rumputnya bisa bergoyang juga saat ada karakter yg sedang berjalan di sekitarnya.
+    - untuk 3d vegetation asset animation (pohon) saya ingin saat karakter sedang berjalan di dekatnya pohonnya akan ikut bergoyang mengikuti arah angin / gerakan karakter tersebut.
+    - saya ingin menambakan kolam ikan dan saya ingin ikan berenang di kolam tersebut, saya juga ingin menambahkan animasi ikan yg sedang berenang.
+    - saya ingin menambakan ai patroli manusia yg sedang berjalan di sekitarnya.
+    - saya ingin menambahkan suara mobil ketika di gas dan ketika klakson yg sedikit lebih realistis
+    - dan ada suara ketika mobil  menabrak asset atau karakter lainnya .
+
+improve gambar mobil dan seluruhnya menjadi tampilan yg lebih 3d realistis tampilan game dan HD , 
+beri sedikit perubahan pada tampilan karakter dan mobilnya 
+saya ingin menjadi lebih realistis lagi dengan detail detail tertentu yg mungkin akan membuat website ini menjadi lebih baik dari sebelumnya 
+tolong upgrade kualitas pada tampilan website saya menjadi lebih baik lagi. 

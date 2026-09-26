@@ -60,3 +60,29 @@ export function distanceToSegment(x: number, z: number, [x1, z1, x2, z2]: [numbe
   const t = Math.max(0, Math.min(1, ((x - x1) * dx + (z - z1) * dz) / (dx * dx + dz * dz)));
   return Math.hypot(x - (x1 + t * dx), z - (z1 + t * dz));
 }
+
+const keepClear: [number, number, number][] = [
+  [0, 0, 11], // home
+  [26, -20, 17], // projects
+  [warehouse.x, warehouse.z, 10],
+  [aboutArea.x, aboutArea.z, 9],
+  [26, 29, 13], // contact
+  [-8, 10, 5], // ramp
+  [9, 16, 5], // cones
+];
+
+/** True when (x, z) is open ground: away from areas, pads, spawns and at least `roadMargin` from road centrelines. */
+export function isClear(x: number, z: number, roadMargin = 4) {
+  if (keepClear.some(([cx, cz, r]) => Math.hypot(x - cx, z - cz) < r)) return false;
+  for (const p of [...projectPadPositions, ...contactPads]) if (Math.hypot(x - p[0], z - p[1]) < 5) return false;
+  if (Object.values(zones).some((zn) => Math.hypot(x - zn.spawn[0], z - zn.spawn[1]) < 5)) return false;
+  return roadSegments.every((seg) => distanceToSegment(x, z, seg) > roadMargin);
+}
+
+// Deterministic pseudo random so the world looks the same on every load.
+export function rng(seed: number) {
+  return () => {
+    seed = (seed * 16807) % 2147483647;
+    return (seed - 1) / 2147483646;
+  };
+}

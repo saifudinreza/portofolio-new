@@ -15,6 +15,8 @@ const ACCEL = 24;
 const TURN_RATE = 2.5;
 const GRIP = 10;
 const RIDE_HEIGHT = 0.4; // distance from body centre to the bottom of the wheels
+const ROLLING_RESISTANCE = 2; // constant deceleration when coasting, m/s²
+const PARK_SPEED = 0.3; // below this with no throttle the parking brake holds the car
 
 const CAMERA_OFFSET = new THREE.Vector3(4, 14, 14);
 let zoom = 1;
@@ -30,6 +32,7 @@ export function Car() {
   const frontPivots = useRef<(THREE.Group | null)[]>([]);
   const lookAt = useRef(new THREE.Vector3());
   const tilt = useRef({ pitch: 0, roll: 0 });
+  const parked = useRef(false);
   const { rapier, world } = useRapier();
   const camera = useThree((s) => s.camera);
   const viewport = useThree((s) => s.size);
@@ -101,20 +104,31 @@ export function Car() {
       honk();
     }
 
+    // Parking brake: with no throttle and almost no speed on the ground, pin the car in x/z so it
+    // cannot creep down the ramp or keep sliding after a bump. Any throttle or leaving the ground frees it.
+    const shouldPark = grounded && drive.throttle === 0 && Math.hypot(vel.x, vel.z) < PARK_SPEED;
+    if (shouldPark !== parked.current) {
+      parked.current = carState.parked = shouldPark;
+      rb.setEnabledTranslations(!shouldPark, true, !shouldPark, true);
+      if (shouldPark) rb.setLinvel({ x: 0, y: vel.y, z: 0 }, true);
+    }
+
     if (grounded) {
       const top = drive.boost ? BOOST_SPEED : MAX_SPEED;
       let push = 0;
       if (drive.throttle > 0 && fwdSpeed < top) push = drive.throttle * ACCEL * (drive.boost ? 1.35 : 1);
       if (drive.throttle < 0 && fwdSpeed > -REVERSE_SPEED) push = drive.throttle * ACCEL * (fwdSpeed > 0.5 ? 1.6 : 0.8);
-      // Rolling resistance when coasting, strong damping when braking.
+      // Rolling resistance when coasting (proportional + a constant part so the car actually
+      // comes to rest instead of decaying forever), strong damping when braking.
       let drag = 0;
-      if (drive.throttle === 0) drag = fwdSpeed * 2.2;
-      if (drive.brake) drag = fwdSpeed * 6;
+      if (drive.throttle === 0) drag = fwdSpeed * 2.2 + Math.sign(fwdSpeed) * ROLLING_RESISTANCE;
+      if (drive.brake) drag = fwdSpeed * 6 + Math.sign(fwdSpeed) * ROLLING_RESISTANCE;
       const along = (push - drag) * mass * dt;
       // Kill sideways sliding so the car carves instead of drifting on ice.
       const grip = -latSpeed * Math.min(1, GRIP * dt) * mass;
-      rb.applyImpulse({ x: fwd.x * along + right.x * grip, y: 0, z: fwd.z * along + right.z * grip }, true);
+      if (!parked.current) rb.applyImpulse({ x: fwd.x * along + right.x * grip, y: 0, z: fwd.z * along + right.z * grip }, true);
 
+      // Also settles any leftover spin from a bump while parked (turnFactor is 0 at rest).
       const turnFactor = THREE.MathUtils.clamp(fwdSpeed / 3, -1, 1);
       const angY = rb.angvel().y;
       const targetAng = drive.steer * TURN_RATE * turnFactor;

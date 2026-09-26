@@ -29,7 +29,11 @@ export const useStore = create<State>((set) => ({
   teleport: null,
   speed: 0,
   start: () => set({ started: true }),
-  setClassic: (open) => set({ classicOpen: open }),
+  setClassic: (open) => {
+    // Keys held while the classic view opens would never see their keyup.
+    if (open) resetInput();
+    set({ classicOpen: open });
+  },
   setSpot: (spot) => set({ spot }),
   clearSpotIf: (match) => set((s) => (s.spot && match(s.spot) ? { spot: null } : {})),
   teleportTo: (zone) => set({ teleport: { zone, nonce: Date.now() }, spot: null }),
@@ -40,18 +44,27 @@ export const useStore = create<State>((set) => ({
  * Driving input. Kept outside React state on purpose: it is read every frame
  * by the car and written by keyboard + touch handlers, so it must not re-render.
  */
+export type TouchButton = 'left' | 'right' | 'gas' | 'reverse';
+
 export const input = {
-  forward: 0, // -1..1 from touch
-  steer: 0, // -1..1 from touch
+  // Each pedal keeps its own state so releasing one never cancels another that is still held.
+  touch: { left: false, right: false, gas: false, reverse: false } as Record<TouchButton, boolean>,
   keys: new Set<string>(),
   resetRequested: false,
   honk: false,
 };
 
+/** Release everything. Called whenever key/pointer up events may never arrive (blur, hidden tab, overlays). */
+export function resetInput() {
+  input.keys.clear();
+  for (const b of Object.keys(input.touch) as TouchButton[]) input.touch[b] = false;
+}
+
 export function readDriveInput() {
   const k = input.keys;
-  let throttle = input.forward;
-  let steer = input.steer;
+  const t = input.touch;
+  let throttle = Number(t.gas) - Number(t.reverse);
+  let steer = Number(t.left) - Number(t.right);
   if (k.has('KeyW') || k.has('ArrowUp')) throttle += 1;
   if (k.has('KeyS') || k.has('ArrowDown')) throttle -= 1;
   if (k.has('KeyA') || k.has('ArrowLeft')) steer += 1;
@@ -64,6 +77,6 @@ export function readDriveInput() {
   };
 }
 
-export function setTouchInput(axis: 'forward' | 'steer', value: number) {
-  input[axis] = value;
+export function setTouchButton(button: TouchButton, pressed: boolean) {
+  input.touch[button] = pressed;
 }

@@ -1,8 +1,9 @@
 import { useEffect, useState, type PointerEvent } from 'react';
 import { useProgress } from '@react-three/drei';
-import { setTouchInput, useStore } from '../store';
+import { input, readDriveInput, setTouchButton, useStore, type TouchButton } from '../store';
 import { zones, type ZoneId } from '../world/layout';
 import { profile } from '../data/profile';
+import { carState } from '../world/carState';
 
 export function Loader() {
   const { progress, active } = useProgress();
@@ -49,7 +50,8 @@ export function TopBar() {
       </div>
       <nav className="teleports" aria-label="Jump to area">
         {(Object.keys(zones) as ZoneId[]).map((z) => (
-          <button key={z} onClick={() => teleportTo(z)}>{zones[z].label}</button>
+          // Drop focus so Space/Enter while driving can't re-trigger the teleport.
+          <button key={z} onClick={(e) => { e.currentTarget.blur(); teleportTo(z); }}>{zones[z].label}</button>
         ))}
       </nav>
       <button className="btn small" onClick={() => setClassic(true)}>Classic view</button>
@@ -75,26 +77,48 @@ export function TouchControls() {
   const [touch] = useState(() => window.matchMedia('(pointer: coarse)').matches);
   if (!touch) return null;
 
-  const hold = (apply: (v: number) => void) => ({
-    onPointerDown: (e: PointerEvent) => {
-      (e.target as HTMLElement).setPointerCapture(e.pointerId);
-      apply(1);
-    },
-    onPointerUp: () => apply(0),
-    onPointerCancel: () => apply(0),
-    onContextMenu: (e: { preventDefault: () => void }) => e.preventDefault(),
-  });
+  const hold = (button: TouchButton) => {
+    const release = () => setTouchButton(button, false);
+    return {
+      onPointerDown: (e: PointerEvent) => {
+        e.currentTarget.setPointerCapture(e.pointerId);
+        setTouchButton(button, true);
+      },
+      onPointerUp: release,
+      onPointerCancel: release,
+      // Fires whenever the browser takes the pointer away (gestures, alerts, app switch), even without pointerup.
+      onLostPointerCapture: release,
+      onContextMenu: (e: { preventDefault: () => void }) => e.preventDefault(),
+    };
+  };
 
   return (
     <div className="touch">
       <div className="pad-group">
-        <button aria-label="Steer left" {...hold((v) => setTouchInput('steer', v))}>◀</button>
-        <button aria-label="Steer right" {...hold((v) => setTouchInput('steer', -v))}>▶</button>
+        <button aria-label="Steer left" {...hold('left')}>◀</button>
+        <button aria-label="Steer right" {...hold('right')}>▶</button>
       </div>
       <div className="pad-group">
-        <button aria-label="Reverse" {...hold((v) => setTouchInput('forward', -v))}>▼</button>
-        <button aria-label="Accelerate" className="gas" {...hold((v) => setTouchInput('forward', v))}>▲</button>
+        <button aria-label="Reverse" {...hold('reverse')}>▼</button>
+        <button aria-label="Accelerate" className="gas" {...hold('gas')}>▲</button>
       </div>
     </div>
   );
+}
+
+/** `?debug` overlay showing the raw driving input, to catch stuck keys or pedals. */
+export function InputDebug() {
+  const [text, setText] = useState('');
+  useEffect(() => {
+    let raf = 0;
+    const tick = () => {
+      const pedals = (Object.keys(input.touch) as TouchButton[]).filter((b) => input.touch[b]);
+      const d = readDriveInput();
+      setText(`keys: ${[...input.keys].join(' ') || '-'}\ntouch: ${pedals.join(' ') || '-'}\nthrottle ${d.throttle} · steer ${d.steer}\nspeed ${carState.speed.toFixed(2)} · ${carState.grounded ? 'grounded' : 'airborne'}${carState.parked ? ' · parked' : ''}`);
+      raf = requestAnimationFrame(tick);
+    };
+    tick();
+    return () => cancelAnimationFrame(raf);
+  }, []);
+  return <pre className="input-debug">{text}</pre>;
 }

@@ -2,7 +2,7 @@ import { useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { CuboidCollider, RigidBody } from '@react-three/rapier';
 import * as THREE from 'three';
-import { WORLD_SIZE, palette, roadSegments } from './layout';
+import { RIVER_HALF_WIDTH, WORLD_SIZE, palette, riverDistance, roadSegments } from './layout';
 import { carState } from './carState';
 import { BODY_FONT, GroundText } from './common';
 import { useStore } from '../store';
@@ -79,9 +79,27 @@ function roadTexture(length: number) {
   return t;
 }
 
+/** Split a road into the stretches that stay on dry land; the bridge carries it over the river. */
+function dryStretches([x1, z1, x2, z2]: [number, number, number, number]) {
+  const steps = 80;
+  const out: [number, number, number, number][] = [];
+  let start = -1;
+  for (let k = 0; k <= steps; k++) {
+    const t = k / steps;
+    const dry = riverDistance(x1 + (x2 - x1) * t, z1 + (z2 - z1) * t) > RIVER_HALF_WIDTH + 0.5;
+    if (dry && start < 0) start = t;
+    if ((!dry || k === steps) && start >= 0) {
+      const end = dry ? t : (k - 1) / steps;
+      if (end - start > 0.01) out.push([x1 + (x2 - x1) * start, z1 + (z2 - z1) * start, x1 + (x2 - x1) * end, z1 + (z2 - z1) * end]);
+      start = -1;
+    }
+  }
+  return out;
+}
+
 /** Light dirt roads from the centre to each area. */
 export function Paths() {
-  const segments = roadSegments.filter((_, i) => i !== 5);
+  const segments = useMemo(() => roadSegments.filter((_, i) => i !== 5).flatMap(dryStretches), []);
   return (
     <group>
       {segments.map(([x1, z1, x2, z2], i) => {
@@ -96,7 +114,7 @@ export function Paths() {
           </mesh>
         );
       })}
-      <GroundText position={[9, 3.2]} size={0.5} color={palette.woodDark} rotation={0.35}>PROJECTS</GroundText>
+      <GroundText position={[7.2, 3.9]} size={0.5} color={palette.woodDark} rotation={0.35}>PROJECTS</GroundText>
       <GroundText position={[-9, 3.2]} size={0.5} color={palette.woodDark} rotation={-0.2}>SKILLS</GroundText>
       <GroundText position={[-6, 12]} size={0.5} color={palette.woodDark} rotation={0.5}>ABOUT</GroundText>
       <GroundText position={[6.5, 12]} size={0.5} color={palette.woodDark} rotation={-0.45}>CONTACT</GroundText>

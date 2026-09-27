@@ -8,9 +8,9 @@ An interactive portfolio where you drive a small car around an island to explore
 | --- | --- | --- |
 | ![Projects](docs/projects.jpg) | ![Skills](docs/skills.jpg) | ![Pond](docs/pond.jpg) |
 
-| The car | Mobile |
-| --- | --- |
-| ![Car](docs/car.jpg) | ![Mobile](docs/mobile.png) |
+| River & bridge | The car | Classic view | Mobile |
+| --- | --- | --- | --- |
+| ![River and bridge](docs/river.jpg) | ![Car](docs/car.jpg) | ![Classic view](docs/classic.jpg) | ![Mobile](docs/mobile.png) |
 
 ## What's in the world
 
@@ -19,6 +19,7 @@ An interactive portfolio where you drive a small car around an island to explore
 - **Skills (the warehouse)**: a stack of knockable crates labelled with my stack, a nod to my day job as a warehouse operator.
 - **About**: education, certifications and work experience.
 - **Contact**: GitHub, LinkedIn and email pads.
+- **River and bridge**: a river winds from the north shore past Home and out to the east, spilling off the cliffs as a waterfall at both ends. A wooden bridge carries the Projects road over it; anywhere else you can wade across (slowly, with a splash).
 - A jump ramp and a cone slalom, just for fun.
 - **Classic view**: the whole portfolio as a normal scrollable page, for recruiters in a hurry and for devices without WebGL.
 
@@ -99,6 +100,8 @@ src/
     textures.ts          procedural canvas textures (sand, roads, wood, tyre tread)
     Letters.tsx          knockable 3D letters
     Zones.tsx            projects, warehouse, about and contact areas
+    River.tsx            river water, bed, banks, pebbles, reeds, waterfalls and splashes
+    Bridge.tsx           wooden bridge over the river, with rails and colliders
     Environment.tsx      ground, roads, ramp, cones, sun
     Props.tsx            little models that float over each project pad
     common.tsx           sensors, ground text, signboards

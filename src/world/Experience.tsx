@@ -9,9 +9,12 @@ import { AboutArea, ContactArea, ProjectsArea, Warehouse } from './Zones';
 import { Ground, HomeText, Lights, Paths, Playground } from './Environment';
 import { Cliffs, Clouds, EnvLighting, Sea, Sky } from './Atmosphere';
 import { Details } from './Details';
+import { Decor } from './Decor';
 import { Trees } from './Trees';
 import { Grass } from './Grass';
 import { Pond } from './Pond';
+import { River } from './River';
+import { Bridge } from './Bridge';
 import { Npcs } from './Npc';
 import { ImpactParticles } from './Impacts';
 import { letterColors, palette } from './layout';
@@ -67,7 +70,10 @@ export function Experience({ debug = false }: { debug?: boolean }) {
           <Trees />
           <Grass />
           <Details />
+          <Decor />
           <Pond />
+          <River />
+          <Bridge />
           <Npcs />
           <ImpactParticles />
           <ProjectsArea />

@@ -1,14 +1,17 @@
 import { useEffect, useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
-import { WORLD_SIZE, isClear, rng } from './layout';
+import { WORLD_SIZE, distanceToSegment, isClear, rng, roadSegments } from './layout';
 import { actors } from './actors';
 import { useStore, type Tier } from '../store';
 
 const HALF = WORLD_SIZE / 2;
-const SEGMENTS = 5;
-const MAX_STAMPS = 16;
-const GRASS_DENSITY: Record<Tier, number> = { low: 0.45, medium: 0.75, high: 1 };
+// Every vertex runs the wind and footprint maths, so blades keep few segments; four still bend smoothly.
+const SEGMENTS = 4;
+const MAX_STAMPS = 12;
+const GRASS_DENSITY: Record<Tier, number> = { low: 0.4, medium: 0.75, high: 1 };
+/** Low also trims the blades a little: fewer grass pixels to shade, which is what low-end GPUs struggle with. */
+const GRASS_HEIGHT: Record<Tier, number> = { low: 0.62, medium: 0.9, high: 1 };
 const TRAIL_SECONDS = 2.2;
 const TRAIL_SPACING = 0.9;
 const textClear: [number, number, number][] = [
@@ -21,7 +24,8 @@ function bladeGeometry() {
   const idx: number[] = [];
   for (let i = 0; i < SEGMENTS; i++) {
     const h = i / SEGMENTS;
-    const w = 0.05 * (1 - h * 0.85);
+    // wide at the root, narrowing faster toward a sharp tip
+    const w = 0.06 * (1 - h) ** 0.8;
     pos.push(-w, h, 0, w, h, 0);
   }
   pos.push(0, 1, 0);
@@ -38,12 +42,43 @@ function bladeGeometry() {
   return g;
 }
 
+/** Distance to the nearest road centreline. */
+const roadDistance = (x: number, z: number) => Math.min(...roadSegments.map((seg) => distanceToSegment(x, z, seg)));
+
 function scatter(target: number) {
   const r = rng(42);
   const blades = new Float32Array(target * 4);
   const tints = new Float32Array(target);
   let n = 0;
   let guard = 0;
+  const add = (x: number, z: number, height: number, tint: number) => {
+    blades.set([x, z, r() * Math.PI, height], n * 4);
+    tints[n] = THREE.MathUtils.clamp(tint + (r() - 0.5) * 0.3, 0, 1);
+    n++;
+  };
+
+  // Thick verges: grass bunches up along both edges of every road, where the wheels don't reach.
+  const verge = Math.floor(target * 0.12);
+  for (const [x1, z1, x2, z2] of roadSegments) {
+    const len = Math.hypot(x2 - x1, z2 - z1);
+    const nx = -(z2 - z1) / len;
+    const nz = (x2 - x1) / len;
+    for (let d = 0; d < len && n < verge; d += 0.35) {
+      for (const side of [-1, 1]) {
+        const off = 2.35 + r() * 0.9;
+        const cx = x1 + ((x2 - x1) * d) / len + nx * side * off;
+        const cz = z1 + ((z2 - z1) * d) / len + nz * side * off;
+        const tint = r();
+        for (let k = 0; k < 6 && n < verge; k++) {
+          const x = cx + (r() - 0.5) * 0.5;
+          const z = cz + (r() - 0.5) * 0.5;
+          if (!isClear(x, z, 2.3) || textClear.some(([tx, tz, tr]) => Math.hypot(x - tx, z - tz) < tr)) continue;
+          add(x, z, 0.45 + r() * 0.45, tint);
+        }
+      }
+    }
+  }
+
   while (n < target && guard++ < target * 4) {
     const cx = (r() * 2 - 1) * (HALF - 1);
     const cz = (r() * 2 - 1) * (HALF - 1);
@@ -56,9 +91,9 @@ function scatter(target: number) {
       const x = cx + (r() - 0.5) * 0.7;
       const z = cz + (r() - 0.5) * 0.7;
       if (!isClear(x, z, 2.3) || textClear.some(([tx, tz, tr]) => Math.hypot(x - tx, z - tz) < tr)) continue;
-      blades.set([x, z, r() * Math.PI, 0.28 + r() * 0.35 * (0.6 + field * 0.6)], n * 4);
-      tints[n] = THREE.MathUtils.clamp(tint + (r() - 0.5) * 0.3, 0, 1);
-      n++;
+      // taller in lush patches and in open meadow away from the roads
+      const open = Math.min(1, Math.max(0, (roadDistance(x, z) - 3) / 8));
+      add(x, z, 0.32 + r() * 0.42 * (0.6 + field * 0.6) + open * 0.18, tint);
     }
   }
   return { blades: blades.subarray(0, n * 4), tints: tints.subarray(0, n), count: n };
@@ -66,6 +101,7 @@ function scatter(target: number) {
 
 const vertexHead = /* glsl */ `
 uniform float uTime;
+uniform float uHeight;
 uniform vec4 uStamps[${MAX_STAMPS}];
 attribute vec4 aBlade; // root x, root z, yaw, height
 attribute float aTint;
@@ -76,7 +112,7 @@ varying float vTint;
 const vertexBody = /* glsl */ `
 float h = position.y;
 vec2 root = aBlade.xy;
-float height = aBlade.w;
+float height = aBlade.w * uHeight;
 vec2 across = vec2(cos(aBlade.z), sin(aBlade.z));
 
 vec2 windDir = vec2(0.89, 0.45);
@@ -112,10 +148,15 @@ varying float vH;
 varying float vTint;
 `;
 
+// Dark, shaded roots to bright tips; each clump's tint picks between fresh green, deep green and dry straw.
 const fragmentColor = /* glsl */ `
-vec3 grassBase = vec3(0.19, 0.36, 0.17);
-vec3 grassTip = mix(vec3(0.55, 0.74, 0.33), vec3(0.78, 0.76, 0.38), vTint);
-vec4 diffuseColor = vec4(mix(grassBase, grassTip, smoothstep(0.0, 1.0, vH)), opacity);
+vec3 grassBase = mix(vec3(0.13, 0.27, 0.12), vec3(0.24, 0.3, 0.14), vTint);
+vec3 fresh = vec3(0.56, 0.76, 0.33);
+vec3 deep = vec3(0.36, 0.6, 0.27);
+vec3 straw = vec3(0.82, 0.77, 0.42);
+vec3 grassTip = vTint < 0.8 ? mix(deep, fresh, vTint / 0.8) : mix(fresh, straw, (vTint - 0.8) / 0.2);
+float t = smoothstep(0.0, 1.0, vH);
+vec4 diffuseColor = vec4(mix(grassBase, grassTip, t * t * (1.6 - 0.6 * t)), opacity);
 `;
 
 export function Grass() {
@@ -134,6 +175,7 @@ export function Grass() {
 
     const uniforms = {
       uTime: { value: 0 },
+      uHeight: { value: 1 },
       uStamps: { value: Array.from({ length: MAX_STAMPS }, () => new THREE.Vector4()) },
     };
     const material = new THREE.MeshStandardMaterial({ roughness: 0.9, side: THREE.DoubleSide });
@@ -151,7 +193,8 @@ export function Grass() {
   // Blades were scattered one random tuft at a time, so drawing only the first N thins the meadow evenly.
   useEffect(() => {
     geometry.instanceCount = Math.round(count * GRASS_DENSITY[tier]);
-  }, [geometry, count, tier]);
+    uniforms.uHeight.value = GRASS_HEIGHT[tier];
+  }, [geometry, count, tier, uniforms]);
 
   useFrame(({ clock }) => {
     const now = clock.elapsedTime;

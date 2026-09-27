@@ -50,6 +50,8 @@ export function GroundText({ children, position, size = 1, color = palette.navy,
       anchorX={align}
       anchorY="middle"
       lineHeight={1.15}
+      // drawn after the (also transparent) roads and paving, which would otherwise cover it
+      renderOrder={2}
     >
       {children}
     </Text>

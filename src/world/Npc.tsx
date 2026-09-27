@@ -2,18 +2,19 @@ import { useEffect, useMemo, useRef, type RefObject } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { CapsuleCollider, RigidBody, useRapier, type RapierCollider, type RapierRigidBody } from '@react-three/rapier';
 import * as THREE from 'three';
-import { npcRoutes, palette, pondDistance, type NpcRoute, type Waypoint } from './layout';
+import { groundHeight, npcRoutes, palette, pondDistance, riverDistance, RIVER_HALF_WIDTH, type NpcRoute, type Waypoint } from './layout';
 import { carState } from './carState';
 import { actors, type Actor } from './actors';
 import { boing } from '../ui/sound';
+import { JOINTS, buildPerson, peopleMaterial, type HairStyle, type Look } from './people';
 
 const WALK_SPEED = 1.3;
 const RUN_SPEED = 4.2;
 const WALK_STRIDE = 0.55; // metres per half gait cycle, so feet don't slide
 const RUN_STRIDE = 0.8;
 const TURN_RATE = 6;
-const HIP = 0.47;
-const SIT_DROP = 0.4;
+// sitting on the ground with knees up: the hips drop this far and the feet stay planted
+const SIT_DROP = 0.36;
 const ACTOR_RADIUS = 0.6;
 // Car collision box half extents (chassis plus a person's width).
 const HIT_HALF_WIDTH = 0.8;
@@ -27,6 +28,24 @@ const skins = ['#F1C6A0', '#D9A27A', '#A8714F', '#7A4B32'];
 const shirts = [palette.teal, palette.coral, palette.yellow, palette.navy, '#8E6CC8', palette.cream, '#5FA052'];
 const pants = ['#2F3A56', palette.dark, palette.woodDark, '#4A5A3A'];
 const hairs = ['#2A1F1A', '#5A3A22', '#1A1A1E', '#C99A4B', '#8A3B22'];
+const hairStyles: HairStyle[] = ['short', 'long', 'bun', 'curly'];
+const packs = [palette.coral, palette.teal, palette.yellow, '#8E6CC8'];
+
+/** Everyone looks different but the same on every visit: all picks come from the route index. */
+function lookFor(seed: number, hat: boolean): Look {
+  return {
+    skin: skins[seed % skins.length],
+    shirt: shirts[(seed * 3 + 1) % shirts.length],
+    pants: pants[(seed * 5 + 2) % pants.length],
+    hair: hairs[(seed * 7 + 3) % hairs.length],
+    hairStyle: hairStyles[(seed * 5 + 1) % hairStyles.length],
+    hat,
+    glasses: seed % 3 === 1,
+    backpack: seed % 4 === 2 ? packs[seed % packs.length] : null,
+    longSleeves: seed % 3 === 2,
+    shorts: seed % 4 === 1,
+  };
+}
 
 type State = 'patrol' | 'idle' | 'avoid' | 'sit' | 'knocked' | 'getup';
 
@@ -72,16 +91,17 @@ function Person({ route, seed }: { route: NpcRoute; seed: number }) {
   const armR = useRef<THREE.Group>(null);
   const legL = useRef<THREE.Group>(null);
   const legR = useRef<THREE.Group>(null);
+  const kneeL = useRef<THREE.Group>(null);
+  const kneeR = useRef<THREE.Group>(null);
+  const elbowL = useRef<THREE.Group>(null);
+  const elbowR = useRef<THREE.Group>(null);
+  const eyes = useRef<THREE.Mesh>(null);
   const stars = useRef<THREE.Group>(null);
   const { rapier } = useRapier();
 
   const points = useMemo(() => offsetRoute(route), [route]);
-  const look = {
-    skin: skins[seed % skins.length],
-    shirt: shirts[(seed * 3 + 1) % shirts.length],
-    pants: pants[(seed * 5 + 2) % pants.length],
-    hair: hairs[(seed * 7 + 3) % hairs.length],
-  };
+  const parts = useMemo(() => buildPerson(lookFor(seed, !!route.hat)), [seed, route.hat]);
+  const material = peopleMaterial();
 
   const brain = useRef({
     state: (route.sit && points.length === 1 ? 'sit' : 'patrol') as State,
@@ -103,6 +123,7 @@ function Person({ route, seed }: { route: NpcRoute; seed: number }) {
     solidAt: 0,
     stillFor: 0,
     getup: { from: new THREE.Quaternion(), y: 0, t: 0 },
+    blinkAt: 2 + seed * 0.7,
   });
   const actor = useRef<Actor>({ x: points[0].x, z: points[0].z, radius: ACTOR_RADIUS });
   const tmp = useMemo(() => ({ q: new THREE.Quaternion(), q2: new THREE.Quaternion(), v: new THREE.Vector3() }), []);
@@ -162,7 +183,8 @@ function Person({ route, seed }: { route: NpcRoute; seed: number }) {
         // a gentle nudge just shuffles them out of the way
         s.x += (dx / (carDist || 1)) * dt * 2.5;
         s.z += (dz / (carDist || 1)) * dt * 2.5;
-      } else if (s.state !== 'avoid' && carSpeed > DODGE_SPEED) {
+      } else if (s.state !== 'avoid' && carSpeed > DODGE_SPEED && groundHeight(s.x, s.z) === 0) {
+        // (no hopping aside on the bridge: there is only water past the rails)
         // Will the car pass within a metre or two in the next ~1.3 s? Then hop aside.
         const v2 = carVx * carVx + carVz * carVz;
         const t = (dx * carVx + dz * carVz) / v2;
@@ -176,7 +198,8 @@ function Person({ route, seed }: { route: NpcRoute; seed: number }) {
             px = -px;
             pz = -pz;
           }
-          if (pondDistance(s.x + px * DODGE_DISTANCE, s.z + pz * DODGE_DISTANCE) < 1.15) {
+          const wet = (x: number, z: number) => pondDistance(x, z) < 1.15 || riverDistance(x, z) < RIVER_HALF_WIDTH + 0.3;
+          if (wet(s.x + px * DODGE_DISTANCE, s.z + pz * DODGE_DISTANCE)) {
             px = -px;
             pz = -pz;
           }
@@ -328,7 +351,8 @@ function Person({ route, seed }: { route: NpcRoute; seed: number }) {
         s.yaw = turnToward(s.yaw, targetYaw, TURN_RATE * (run ? 2 : 1) * dt);
         yawQuat(s.yaw, tmp.q);
       }
-      rb.setNextKinematicTranslation({ x: s.x, y: s.y, z: s.z });
+      // walking over the bridge lifts them onto the deck
+      rb.setNextKinematicTranslation({ x: s.x, y: s.y + groundHeight(s.x, s.z), z: s.z });
       rb.setNextKinematicRotation(tmp.q);
     }
 
@@ -353,20 +377,31 @@ function Person({ route, seed }: { route: NpcRoute; seed: number }) {
     let armSpread = 0.08;
     let drop = 0;
     let bob = Math.abs(Math.sin(s.phase)) * 0.06 * s.gait;
+    // Knees flex while each foot swings through (more when running), elbows stay a little bent and pump when running.
+    let kneeLX = Math.max(0, -Math.cos(s.phase)) * s.gait * (run ? 1.5 : 0.9) + 0.05;
+    let kneeRX = Math.max(0, Math.cos(s.phase)) * s.gait * (run ? 1.5 : 0.9) + 0.05;
+    let elbowX = -(0.2 + s.gait * (run ? 1.1 : 0.35));
     if (s.state === 'sit') {
-      legX = -Math.PI / 2 + Math.sin(now * 1.3 + seed) * 0.08;
-      armX = -0.5;
+      // thighs angle up and forward, shins come back down to the ground
+      legX = -2.1 + Math.sin(now * 1.3 + seed) * 0.04;
+      kneeLX = kneeRX = 1.75 + Math.sin(now * 1.3 + seed) * 0.04;
+      armX = -0.35;
+      elbowX = -0.9;
       drop = SIT_DROP;
       bob = 0;
     } else if (s.state === 'knocked') {
       const flying = s.stillFor === 0;
       legX = flying ? Math.sin(now * 20) * 0.8 : 0;
+      kneeLX = flying ? 0.6 + Math.sin(now * 23) * 0.5 : 0.3;
+      kneeRX = flying ? 0.6 + Math.cos(now * 19) * 0.5 : 0.1;
+      elbowX = flying ? -0.4 + Math.sin(now * 21) * 0.6 : -0.2;
       armX = 0;
       legSpread = flying ? 0.3 : 0.25;
       armSpread = flying ? 1.4 + Math.sin(now * 25) * 0.5 : 1.2;
       bob = 0;
     } else if (s.state === 'getup') {
       armSpread = 0.4;
+      kneeLX = kneeRX = 0.6;
     }
 
     const k = 1 - Math.exp(-18 * dt);
@@ -378,6 +413,19 @@ function Person({ route, seed }: { route: NpcRoute; seed: number }) {
     lerpRot(legL.current, legX, legSpread);
     lerpRot(legR.current, s.state === 'sit' ? legX : -legX, -legSpread);
     lerpRot(armR.current, -armX, -armSpread);
+    lerpRot(kneeL.current, kneeLX, 0);
+    lerpRot(kneeR.current, kneeRX, 0);
+    lerpRot(elbowR.current, elbowX, 0);
+    // a waving forearm bends up at the elbow
+    lerpRot(elbowL.current, THREE.MathUtils.lerp(elbowX, -1.3 + Math.sin(now * 10) * 0.25, s.wave), 0);
+
+    // Eyes blink every few seconds, and stay shut while knocked down or dizzy.
+    if (eyes.current) {
+      if (now > s.blinkAt + 0.13) s.blinkAt = now + 2.5 + Math.random() * 3;
+      const shut = (s.state === 'knocked' && s.stillFor > 0) || s.dizzy > 0 || s.state === 'getup';
+      const blinking = now > s.blinkAt;
+      eyes.current.scale.y = THREE.MathUtils.lerp(eyes.current.scale.y, shut || blinking ? 0.12 : 1, 1 - Math.exp(-30 * dt));
+    }
     // left arm doubles as the waving arm
     const waveZ = 2.6 + Math.sin(now * 10) * 0.35;
     lerpRot(armL.current, armX * (1 - s.wave), THREE.MathUtils.lerp(armSpread, waveZ, s.wave));
@@ -411,64 +459,34 @@ function Person({ route, seed }: { route: NpcRoute; seed: number }) {
       >
         <CapsuleCollider ref={collider} args={[0.3, 0.25]} position={[0, 0.6, 0]} sensor density={1} friction={0.8} restitution={0.3} />
         <group ref={root}>
-          {/* legs pivot at the hip */}
+          {/* legs pivot at the hip, shins at the knee */}
           {[
-            [legL, 0.09],
-            [legR, -0.09],
-          ].map(([ref, x], i) => (
-            <group key={i} ref={ref as RefObject<THREE.Group>} position={[x as number, HIP, 0]}>
-              <mesh position={[0, -0.21, 0]} castShadow>
-                <boxGeometry args={[0.13, 0.42, 0.15]} />
-                <meshStandardMaterial color={look.pants} />
-              </mesh>
-              <mesh position={[0, -0.44, 0.03]} castShadow>
-                <boxGeometry args={[0.14, 0.06, 0.2]} />
-                <meshStandardMaterial color={palette.dark} />
-              </mesh>
+            [legL, kneeL, JOINTS.hipX],
+            [legR, kneeR, -JOINTS.hipX],
+          ].map(([leg, knee, x], i) => (
+            <group key={i} ref={leg as RefObject<THREE.Group>} position={[x as number, JOINTS.hip, 0]}>
+              <mesh geometry={parts.thigh} material={material} castShadow />
+              <group ref={knee as RefObject<THREE.Group>} position={[0, JOINTS.knee, 0]}>
+                <mesh geometry={parts.shin} material={material} castShadow />
+              </group>
             </group>
           ))}
-          <mesh position={[0, 0.68, 0]} castShadow>
-            <boxGeometry args={[0.36, 0.44, 0.22]} />
-            <meshStandardMaterial color={look.shirt} />
-          </mesh>
-          {/* arms pivot at the shoulder */}
+          <mesh geometry={parts.torso} material={material} castShadow />
+          {/* arms pivot at the shoulder, forearms at the elbow */}
           {[
-            [armL, 0.24],
-            [armR, -0.24],
-          ].map(([ref, x], i) => (
-            <group key={i} ref={ref as RefObject<THREE.Group>} position={[x as number, 0.86, 0]}>
-              <mesh position={[0, -0.16, 0]} castShadow>
-                <boxGeometry args={[0.1, 0.32, 0.11]} />
-                <meshStandardMaterial color={look.shirt} />
-              </mesh>
-              <mesh position={[0, -0.36, 0]}>
-                <boxGeometry args={[0.09, 0.09, 0.09]} />
-                <meshStandardMaterial color={look.skin} />
-              </mesh>
+            [armL, elbowL, JOINTS.shoulderX],
+            [armR, elbowR, -JOINTS.shoulderX],
+          ].map(([arm, elbow, x], i) => (
+            <group key={i} ref={arm as RefObject<THREE.Group>} position={[x as number, JOINTS.shoulder, 0]}>
+              <mesh geometry={parts.upperArm} material={material} castShadow />
+              <group ref={elbow as RefObject<THREE.Group>} position={[0, JOINTS.elbow, 0]}>
+                <mesh geometry={parts.forearm} material={material} castShadow />
+              </group>
             </group>
           ))}
-          <group ref={head} position={[0, 0.9, 0]}>
-            <mesh position={[0, 0.17, 0]} castShadow>
-              <boxGeometry args={[0.3, 0.3, 0.28]} />
-              <meshStandardMaterial color={look.skin} />
-            </mesh>
-            {route.hat ? (
-              <mesh position={[0, 0.35, 0]} castShadow>
-                <cylinderGeometry args={[0.17, 0.2, 0.12, 10]} />
-                <meshStandardMaterial color={palette.yellow} />
-              </mesh>
-            ) : (
-              <mesh position={[0, 0.3, -0.03]} castShadow>
-                <boxGeometry args={[0.32, 0.09, 0.32]} />
-                <meshStandardMaterial color={look.hair} />
-              </mesh>
-            )}
-            {[0.07, -0.07].map((x) => (
-              <mesh key={x} position={[x, 0.2, 0.145]}>
-                <boxGeometry args={[0.04, 0.05, 0.01]} />
-                <meshStandardMaterial color={palette.dark} />
-              </mesh>
-            ))}
+          <group ref={head} position={[0, JOINTS.neck, 0]}>
+            <mesh geometry={parts.head} material={material} castShadow />
+            <mesh ref={eyes} geometry={parts.eyes} material={material} position={[0, 0.14, 0.113]} />
           </group>
         </group>
       </RigidBody>

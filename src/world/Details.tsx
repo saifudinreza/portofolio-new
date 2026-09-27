@@ -1,11 +1,14 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { CuboidCollider, CylinderCollider, RigidBody } from '@react-three/rapier';
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
+import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 import { WORLD_SIZE, distanceToSegment, isClear, palette, pond, pondDistance, rng, roadSegments, trails } from './layout';
 import { carState } from './carState';
 import { woodMap } from './textures';
+import { setCardShare, shrubParts } from './foliage';
+import { useStore } from '../store';
 
 const HALF = WORLD_SIZE / 2;
 const up = new THREE.Vector3(0, 1, 0);
@@ -31,23 +34,38 @@ function instanced(geometry: THREE.BufferGeometry, material: THREE.Material, ite
 const mat = (p: THREE.Vector3, yaw: number, s: THREE.Vector3 | number) =>
   new THREE.Matrix4().compose(p, new THREE.Quaternion().setFromAxisAngle(up, yaw), typeof s === 'number' ? new THREE.Vector3(s, s, s) : s);
 
+/** Five cupped petals around a golden centre; petals take the instance colour, the centre stays warm. */
+function flowerGeometry() {
+  const petals = Array.from({ length: 5 }, (_, i) =>
+    new THREE.CircleGeometry(0.045, 5).scale(0.6, 1, 1).translate(0, 0.045, 0).rotateX(-1.1).rotateY((i / 5) * Math.PI * 2).toNonIndexed(),
+  );
+  const centre = new THREE.SphereGeometry(0.022, 6, 3).scale(1, 0.6, 1).translate(0, 0.012, 0).toNonIndexed();
+  const g = mergeGeometries([...petals, centre])!;
+  const col: number[] = [];
+  const petalVerts = petals.reduce((n, p) => n + p.getAttribute('position').count, 0);
+  for (let i = 0; i < g.getAttribute('position').count; i++) {
+    if (i < petalVerts) col.push(1, 1, 1);
+    else col.push(1.4, 1.05, 0.35);
+  }
+  g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));
+  return g;
+}
+
 // ---------- bushes and flowers ----------
 
 function useVegetation() {
   return useMemo(() => {
     const r = rng(303);
-    const bushGeo = mergeGeometries([
-      new THREE.IcosahedronGeometry(0.55, 1).translate(0, 0.4, 0),
-      new THREE.IcosahedronGeometry(0.42, 1).translate(0.45, 0.3, 0.1),
-      new THREE.IcosahedronGeometry(0.38, 1).translate(-0.4, 0.28, -0.12),
-    ])!;
+    const shrub = shrubParts();
     const bushes: { m: THREE.Matrix4; color: string }[] = [];
     for (let guard = 0; bushes.length < 70 && guard < 4000; guard++) {
       const x = (r() * 2 - 1) * HALF;
       const z = (r() * 2 - 1) * HALF;
       if (!meadow(x, z, 3)) continue;
-      const s = 0.7 + r() * 0.7;
-      bushes.push({ m: mat(new THREE.Vector3(x, 0, z), r() * 6.3, new THREE.Vector3(s, s * (0.8 + r() * 0.3), s)), color: ['#5E9E52', '#6BAA5C', '#4E8C47', '#7BB463'][Math.floor(r() * 4)] });
+      const s = 0.55 + r() * 0.5;
+      // the leaf colours live in the shrub's vertex colours; per bush only the lightness shifts
+      const l = Math.round((0.85 + r() * 0.25) * 255);
+      bushes.push({ m: mat(new THREE.Vector3(x, 0, z), r() * 6.3, new THREE.Vector3(s, s * (0.8 + r() * 0.3), s)), color: `rgb(${l},${l},${l})` });
     }
 
     // Flowers grow in small patches: a stem and a bright low-poly head.
@@ -72,9 +90,11 @@ function useVegetation() {
     }
 
     return {
-      bushes: instanced(bushGeo, new THREE.MeshStandardMaterial({ roughness: 0.9, flatShading: true }), bushes),
+      // cards receive shadows, the solid cores cast them
+      bushes: instanced(shrub.cards, shrub.cardMaterial, bushes, false),
+      bushCores: instanced(shrub.core, shrub.coreMaterial, bushes),
       stems: instanced(new THREE.CylinderGeometry(0.008, 0.01, 1, 4).translate(0, 0.5, 0), new THREE.MeshStandardMaterial({ color: '#5E8F46' }), stems, false),
-      heads: instanced(new THREE.DodecahedronGeometry(0.05, 0), new THREE.MeshStandardMaterial({ roughness: 0.6, flatShading: true }), heads, false),
+      heads: instanced(flowerGeometry(), new THREE.MeshStandardMaterial({ roughness: 0.6, vertexColors: true, side: THREE.DoubleSide }), heads, false),
     };
   }, []);
 }
@@ -131,13 +151,18 @@ function useFurniture() {
     const metal = new THREE.MeshStandardMaterial({ color: '#2E3440', metalness: 0.6, roughness: 0.45 });
     const wood = new THREE.MeshStandardMaterial({ color: palette.wood, roughness: 0.85, map: woodMap() });
 
+    // Garden lamp: fluted pole on a stepped base, a curled arm and a six-sided lantern with warm glass.
     const lampGeo = mergeGeometries([
-      new THREE.CylinderGeometry(0.06, 0.09, 2.8, 8).translate(0, 1.4, 0),
-      new THREE.CylinderGeometry(0.16, 0.2, 0.12, 8).translate(0, 0.06, 0),
-      new THREE.BoxGeometry(0.06, 0.06, 0.6).translate(0, 2.75, 0.28),
-      new THREE.CylinderGeometry(0.12, 0.16, 0.1, 6).translate(0, 2.7, 0.56),
-    ])!;
-    const bulbGeo = new THREE.SphereGeometry(0.09, 10, 8).translate(0, 2.6, 0.56);
+      new THREE.CylinderGeometry(0.05, 0.075, 2.8, 12).translate(0, 1.4, 0),
+      new THREE.CylinderGeometry(0.14, 0.19, 0.18, 12).translate(0, 0.09, 0),
+      new THREE.CylinderGeometry(0.1, 0.13, 0.14, 12).translate(0, 0.25, 0),
+      new THREE.SphereGeometry(0.07, 10, 8).translate(0, 2.82, 0),
+      new RoundedBoxGeometry(0.05, 0.05, 0.62, 2, 0.02).translate(0, 2.76, 0.28),
+      new THREE.TorusGeometry(0.06, 0.012, 6, 14, Math.PI).rotateY(Math.PI / 2).translate(0, 2.7, 0.08),
+      new THREE.ConeGeometry(0.18, 0.13, 6).translate(0, 2.71, 0.56),
+      new THREE.CylinderGeometry(0.11, 0.09, 0.04, 6).translate(0, 2.38, 0.56),
+    ].map((g) => g.toNonIndexed()))!;
+    const bulbGeo = new THREE.CylinderGeometry(0.115, 0.095, 0.26, 6).translate(0, 2.52, 0.56);
     const lampItems = lamps.map((l) => ({ m: mat(new THREE.Vector3(l.x, 0, l.z), l.yaw, 1) }));
 
     const posts: { m: THREE.Matrix4 }[] = [];
@@ -166,7 +191,7 @@ function useFurniture() {
       benches,
       meshes: [
         instanced(lampGeo, metal, lampItems),
-        instanced(bulbGeo, new THREE.MeshStandardMaterial({ color: '#FFF1C9', emissive: '#FFD27A', emissiveIntensity: 2.6 }), lampItems, false),
+        instanced(bulbGeo, new THREE.MeshStandardMaterial({ color: '#FFF1C9', emissive: '#FFC26B', emissiveIntensity: 2.6, roughness: 0.3 }), lampItems, false),
         instanced(new THREE.BoxGeometry(0.1, 0.9, 0.1), wood, posts),
         instanced(new THREE.BoxGeometry(0.05, 0.1, 1), wood, rails),
         instanced(benchGeo, wood, benchItems),
@@ -183,7 +208,7 @@ function useCritters() {
     const r = rng(404);
     const wingGeo = new THREE.CircleGeometry(0.1, 6).translate(0.09, 0, 0).rotateX(-Math.PI / 2);
     const colors = [palette.coral, palette.yellow, palette.teal, palette.cream];
-    const butterflies = Array.from({ length: 10 }, (_, i) => {
+    const butterflies = Array.from({ length: 12 }, (_, i) => {
       const group = new THREE.Group();
       const material = new THREE.MeshStandardMaterial({ color: colors[i % colors.length], side: THREE.DoubleSide, roughness: 0.6 });
       const left = new THREE.Mesh(wingGeo, material);
@@ -220,6 +245,8 @@ export function Details() {
   const veg = useVegetation();
   const furniture = useFurniture();
   const critters = useCritters();
+  const tier = useStore((st) => st.tier);
+  useEffect(() => setCardShare(veg.bushes.geometry, tier), [veg, tier]);
   const tmp = useMemo(() => ({ m: new THREE.Matrix4(), q: new THREE.Quaternion(), e: new THREE.Euler(), p: new THREE.Vector3(), s: new THREE.Vector3() }), []);
 
   useFrame(({ clock }, rawDt) => {
@@ -279,6 +306,7 @@ export function Details() {
         ))}
       </RigidBody>
       <primitive object={veg.bushes} />
+      <primitive object={veg.bushCores} />
       <primitive object={veg.stems} />
       <primitive object={veg.heads} />
       {furniture.meshes.map((m, i) => (

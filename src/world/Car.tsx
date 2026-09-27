@@ -205,8 +205,9 @@ export function Car() {
     wheels.current.forEach((w) => w && (w.rotation.x += spin));
     frontPivots.current.forEach((p) => p && (p.rotation.y = THREE.MathUtils.lerp(p.rotation.y, drive.steer * 0.45, 0.2)));
     const t = tilt.current;
-    t.pitch = THREE.MathUtils.lerp(t.pitch, grounded ? -drive.throttle * 0.05 + (drive.brake ? 0.06 : 0) : 0, 0.1);
-    t.roll = THREE.MathUtils.lerp(t.roll, grounded ? drive.steer * THREE.MathUtils.clamp(fwdSpeed / MAX_SPEED, -1, 1) * 0.1 : 0, 0.1);
+    // the jeep's tall body squats under throttle, dives when braking and leans out of corners
+    t.pitch = THREE.MathUtils.lerp(t.pitch, grounded ? -drive.throttle * 0.06 + (drive.brake ? 0.08 : 0) : 0, 0.1);
+    t.roll = THREE.MathUtils.lerp(t.roll, grounded ? drive.steer * THREE.MathUtils.clamp(fwdSpeed / MAX_SPEED, -1, 1) * 0.13 : 0, 0.1);
     if (chassis.current) {
       chassis.current.rotation.x = t.pitch;
       chassis.current.rotation.z = t.roll;

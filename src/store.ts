@@ -29,8 +29,27 @@ function saveAudioPrefs(prefs: { muted: boolean; volume: number }) {
   }
 }
 
+/**
+ * Graphics quality. "high" adds post-processing (AO, bloom, SMAA, grading), headlight spotlights, a bigger
+ * shadow map and extra particles; "low" keeps the plain renderer. Touch devices start on low.
+ */
+export type Quality = 'high' | 'low';
+const QUALITY_KEY = 'zare-world-quality';
+
+function loadQuality(): Quality {
+  try {
+    const saved = localStorage.getItem(QUALITY_KEY);
+    if (saved === 'high' || saved === 'low') return saved;
+  } catch {
+    // fall through to the device default
+  }
+  return typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches ? 'low' : 'high';
+}
+
 type State = {
   started: boolean;
+  quality: Quality;
+  setQuality: (q: Quality) => void;
   muted: boolean;
   volume: number;
   classicOpen: boolean;
@@ -49,6 +68,15 @@ type State = {
 
 export const useStore = create<State>((set, get) => ({
   started: false,
+  quality: loadQuality(),
+  setQuality: (quality) => {
+    set({ quality });
+    try {
+      localStorage.setItem(QUALITY_KEY, quality);
+    } catch {
+      // not remembered, that's fine
+    }
+  },
   ...loadAudioPrefs(),
   classicOpen: false,
   spot: null,

@@ -54,9 +54,30 @@ export function TopBar() {
           <button key={z} onClick={(e) => { e.currentTarget.blur(); teleportTo(z); }}>{zones[z].label}</button>
         ))}
       </nav>
+      <QualityToggle />
       <SoundControl />
       <button className="btn small" onClick={() => setClassic(true)}>Classic view</button>
     </header>
+  );
+}
+
+/** HD / Lite switch for post-processing and the heavier effects; remembered in localStorage. */
+function QualityToggle() {
+  const quality = useStore((s) => s.quality);
+  const setQuality = useStore((s) => s.setQuality);
+  const high = quality === 'high';
+  return (
+    <button
+      className="quality-toggle"
+      aria-pressed={high}
+      title={high ? 'High quality: switch to lite for speed' : 'Lite quality: switch to HD visuals'}
+      onClick={(e) => {
+        e.currentTarget.blur();
+        setQuality(high ? 'low' : 'high');
+      }}
+    >
+      {high ? 'HD' : 'Lite'}
+    </button>
   );
 }
 

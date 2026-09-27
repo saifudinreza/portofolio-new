@@ -27,7 +27,7 @@ export function Letters({ text, size, depth, position, colors, gap = 0.12 }: Pro
         out.push({ geo: new THREE.BufferGeometry(), w: size * 0.4, h: 0 });
         continue;
       }
-      const geo = new TextGeometry(ch, { font, size, depth, curveSegments: 6, bevelEnabled: true, bevelThickness: 0.03, bevelSize: 0.02, bevelSegments: 2 });
+      const geo = new TextGeometry(ch, { font, size, depth, curveSegments: 10, bevelEnabled: true, bevelThickness: 0.06, bevelSize: 0.04, bevelSegments: 4 });
       geo.computeBoundingBox();
       const bb = geo.boundingBox!;
       // Centre each glyph on its own origin so the collider matches.
@@ -50,7 +50,7 @@ export function Letters({ text, size, depth, position, colors, gap = 0.12 }: Pro
           <RigidBody key={i} position={[x, 0.01, 0]} colliders={false} linearDamping={0.3} angularDamping={0.4} userData={{ material: 'metal' }}>
             <CuboidCollider args={[g.w / 2, g.h / 2, depth / 2 + 0.03]} position={[0, g.h / 2, 0]} mass={0.5} friction={0.9} />
             <mesh geometry={g.geo} castShadow receiveShadow>
-              <meshStandardMaterial color={colors[i % colors.length]} roughness={0.5} />
+              <meshPhysicalMaterial color={colors[i % colors.length]} roughness={0.35} clearcoat={0.6} clearcoatRoughness={0.15} />
             </mesh>
           </RigidBody>
         );

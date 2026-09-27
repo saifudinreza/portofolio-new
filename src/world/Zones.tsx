@@ -5,6 +5,7 @@ import { crateSkills, projects } from '../data/profile';
 import { aboutArea, contactPads, palette, projectPadPositions, warehouse } from './layout';
 import { BODY_FONT, DISPLAY_FONT, GroundText, Sensor, Signboard } from './common';
 import { ProjectProp } from './Props';
+import { woodMap } from './textures';
 
 const sameSpot = (a: Spot | null, b: Spot) => JSON.stringify(a) === JSON.stringify(b);
 
@@ -110,7 +111,7 @@ export function Warehouse() {
           <CuboidCollider args={[size / 2, size / 2, size / 2]} mass={0.3} friction={0.7} />
           <mesh castShadow receiveShadow>
             <boxGeometry args={[size, size, size]} />
-            <meshStandardMaterial color={c.color} roughness={0.85} />
+            <meshStandardMaterial color={c.color} roughness={0.85} map={woodMap()} />
           </mesh>
           <Text position={[0, 0, size / 2 + 0.01]} fontSize={0.17} maxWidth={1} textAlign="center" color={palette.dark} font={DISPLAY_FONT} anchorX="center" anchorY="middle">{c.label}</Text>
           <Text position={[0, size / 2 + 0.01, 0]} rotation={[-Math.PI / 2, 0, 0]} fontSize={0.17} maxWidth={1} textAlign="center" color={palette.dark} font={DISPLAY_FONT} anchorX="center" anchorY="middle">{c.label}</Text>

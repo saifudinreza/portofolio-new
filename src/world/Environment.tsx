@@ -5,6 +5,8 @@ import * as THREE from 'three';
 import { WORLD_SIZE, palette, roadSegments } from './layout';
 import { carState } from './carState';
 import { BODY_FONT, GroundText } from './common';
+import { useStore } from '../store';
+import { groundColorMap, groundNormalMap, roadMap } from './textures';
 
 const HALF = WORLD_SIZE / 2;
 
@@ -12,6 +14,7 @@ const HALF = WORLD_SIZE / 2;
 export function Lights() {
   const sun = useRef<THREE.DirectionalLight>(null);
   const target = useMemo(() => new THREE.Object3D(), []);
+  const high = useStore((s) => s.quality === 'high');
   useFrame(() => {
     if (!sun.current) return;
     sun.current.position.set(carState.x + 12, 22, carState.z + 8);
@@ -20,7 +23,8 @@ export function Lights() {
   });
   return (
     <>
-      <hemisphereLight args={['#FFF4E0', '#C9A77A', 1.3]} />
+      {/* on high the environment map adds soft fill too, so the hemisphere light steps down */}
+      <hemisphereLight args={['#FFF4E0', '#C9A77A', high ? 0.8 : 1.3]} />
       <directionalLight
         ref={sun}
         target={target}
@@ -53,17 +57,25 @@ export function Ground() {
         <CuboidCollider args={[0.5, 3, HALF]} position={[-HALF, 2, 0]} />
         <CuboidCollider args={[0.5, 3, HALF]} position={[HALF, 2, 0]} />
       </RigidBody>
-      <mesh position={[0, -1.5, 0]} receiveShadow>
-        <boxGeometry args={[WORLD_SIZE, 3, WORLD_SIZE]} />
-        <meshStandardMaterial color={palette.ground} roughness={1} />
+      {/* sandy top with a subtle normal map; the rocky cliffs (Atmosphere) hide the sides */}
+      <mesh position={[0, 0, 0]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
+        <planeGeometry args={[WORLD_SIZE, WORLD_SIZE]} />
+        <meshStandardMaterial color={palette.ground} roughness={1} map={groundColorMap(24)} normalMap={groundNormalMap(24)} normalScale={new THREE.Vector2(0.35, 0.35)} />
       </mesh>
-      {/* darker skirt below the top surface gives the island some depth */}
-      <mesh position={[0, -4, 0]}>
-        <boxGeometry args={[WORLD_SIZE - 1, 3, WORLD_SIZE - 1]} />
+      <mesh position={[0, -1.6, 0]}>
+        <boxGeometry args={[WORLD_SIZE - 0.1, 3.18, WORLD_SIZE - 0.1]} />
         <meshStandardMaterial color={palette.groundEdge} roughness={1} />
       </mesh>
     </>
   );
+}
+
+/** One road strip's texture: shared canvas, own repeat so the pattern keeps its scale on every length. */
+function roadTexture(length: number) {
+  const t = roadMap().clone();
+  t.repeat.set(1, length / 7);
+  t.needsUpdate = true;
+  return t;
 }
 
 /** Light dirt roads from the centre to each area. */
@@ -77,8 +89,9 @@ export function Paths() {
         const len = Math.hypot(dx, dz);
         return (
           <mesh key={i} position={[(x1 + x2) / 2, 0.006, (z1 + z2) / 2]} rotation={[-Math.PI / 2, 0, Math.atan2(dx, dz)]} receiveShadow>
-            <planeGeometry args={[3, len]} />
-            <meshStandardMaterial color={palette.path} roughness={1} />
+            {/* a little wider than the drivable 3 m so the ragged edges fade into the sand */}
+            <planeGeometry args={[3.8, len + 1.5]} />
+            <meshStandardMaterial color={palette.path} roughness={1} map={roadTexture(len + 1.5)} transparent depthWrite={false} polygonOffset polygonOffsetFactor={-1} />
           </mesh>
         );
       })}

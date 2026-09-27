@@ -3,9 +3,10 @@ import { useFrame, useThree } from '@react-three/fiber';
 import { CoefficientCombineRule, RigidBody, RoundCuboidCollider, useBeforePhysicsStep, useRapier, type CollisionEnterPayload, type RapierRigidBody } from '@react-three/rapier';
 import * as THREE from 'three';
 import { input, readDriveInput, useStore } from '../store';
-import { zones, palette, pondDistance } from './layout';
+import { zones, pondDistance } from './layout';
 import { impact, updateCarAudio, updateListener, type SurfaceMaterial } from '../ui/sound';
 import { emitImpact } from './impactQueue';
+import { CarModel } from './CarModel';
 import { carState } from './carState';
 import { actors, type Actor } from './actors';
 
@@ -157,6 +158,11 @@ export function Car() {
     }
 
     const drive = started ? readDriveInput() : { throttle: 0, steer: 0, brake: false, boost: false, horn: false };
+    carState.throttle = drive.throttle;
+    carState.brake = drive.brake;
+    carState.boost = drive.boost && drive.throttle > 0;
+    carState.latSpeed = latSpeed;
+    carState.vy = vel.y;
 
     // Parking brake: with no throttle and almost no speed on the ground, pin the car in x/z so it
     // cannot creep down the ramp or keep sliding after a bump. Any throttle or leaving the ground frees it.
@@ -237,13 +243,6 @@ export function Car() {
     });
   });
 
-  const wheelPositions: [number, number, number, boolean][] = [
-    [-0.6, -0.12, 0.6, true],
-    [0.6, -0.12, 0.6, true],
-    [-0.6, -0.12, -0.62, false],
-    [0.6, -0.12, -0.62, false],
-  ];
-
   return (
     <RigidBody
       ref={body}
@@ -259,65 +258,7 @@ export function Car() {
       onCollisionEnter={onCollision}
     >
       <RoundCuboidCollider args={[0.45, 0.2, 0.85, 0.1]} position={[0, -0.1, 0]} friction={0} frictionCombineRule={CoefficientCombineRule.Min} restitution={0.05} density={2} />
-      <group ref={chassis}>
-        {/* body */}
-        <mesh castShadow position={[0, 0.02, 0]}>
-          <boxGeometry args={[1.1, 0.34, 1.9]} />
-          <meshStandardMaterial color={palette.navy} roughness={0.55} />
-        </mesh>
-        {/* cabin */}
-        <mesh castShadow position={[0, 0.34, -0.15]}>
-          <boxGeometry args={[0.9, 0.34, 0.95]} />
-          <meshStandardMaterial color={palette.cream} roughness={0.6} />
-        </mesh>
-        {/* windscreen */}
-        <mesh position={[0, 0.36, 0.34]} rotation={[-0.35, 0, 0]}>
-          <boxGeometry args={[0.8, 0.26, 0.04]} />
-          <meshStandardMaterial color="#7FB6C9" roughness={0.2} metalness={0.2} />
-        </mesh>
-        {/* teal stripe */}
-        <mesh position={[0, 0.2, 0.2]}>
-          <boxGeometry args={[0.3, 0.01, 1.52]} />
-          <meshStandardMaterial color={palette.teal} />
-        </mesh>
-        {/* headlights */}
-        {[-0.38, 0.38].map((x) => (
-          <mesh key={x} position={[x, 0.06, 0.96]}>
-            <boxGeometry args={[0.2, 0.1, 0.04]} />
-            <meshStandardMaterial color="#FFF3C4" emissive="#FFE08A" emissiveIntensity={1.2} />
-          </mesh>
-        ))}
-        {/* tail lights */}
-        {[-0.38, 0.38].map((x) => (
-          <mesh key={x} position={[x, 0.08, -0.96]}>
-            <boxGeometry args={[0.2, 0.08, 0.04]} />
-            <meshStandardMaterial color={palette.coral} emissive={palette.coral} emissiveIntensity={0.6} />
-          </mesh>
-        ))}
-        {/* antenna with a little flag */}
-        <mesh position={[-0.36, 0.72, -0.45]}>
-          <cylinderGeometry args={[0.015, 0.015, 0.5]} />
-          <meshStandardMaterial color={palette.dark} />
-        </mesh>
-        <mesh position={[-0.26, 0.9, -0.45]}>
-          <boxGeometry args={[0.2, 0.12, 0.01]} />
-          <meshStandardMaterial color={palette.coral} />
-        </mesh>
-      </group>
-      {wheelPositions.map(([x, y, z, front], i) => (
-        <group key={i} position={[x, y, z]} ref={(el) => void (front ? (frontPivots.current[i] = el) : null)}>
-          <group ref={(el) => void (wheels.current[i] = el)}>
-            <mesh castShadow rotation={[0, 0, Math.PI / 2]}>
-              <cylinderGeometry args={[0.28, 0.28, 0.22, 18]} />
-              <meshStandardMaterial color={palette.dark} roughness={0.9} />
-            </mesh>
-            <mesh rotation={[0, 0, Math.PI / 2]} position={[x > 0 ? 0.115 : -0.115, 0, 0]}>
-              <cylinderGeometry args={[0.13, 0.13, 0.01, 12]} />
-              <meshStandardMaterial color={palette.cream} />
-            </mesh>
-          </group>
-        </group>
-      ))}
+      <CarModel chassis={chassis} wheels={wheels} frontPivots={frontPivots} />
     </RigidBody>
   );
 }

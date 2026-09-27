@@ -98,6 +98,12 @@ kbd {
 .teleports { display: flex; gap: 4px; background: var(--cream); border: var(--border); border-radius: 12px; padding: 4px; box-shadow: var(--shadow); margin-right: auto; }
 .teleports button { font: inherit; font-weight: 700; font-size: 0.82rem; color: var(--navy); background: none; border: 0; border-radius: 8px; padding: 0.45em 0.75em; cursor: pointer; }
 .sound { display: flex; align-items: center; gap: 6px; background: var(--cream); border: var(--border); border-radius: 12px; padding: 4px 10px 4px 4px; box-shadow: var(--shadow); }
+.quality-toggle {
+  font: inherit; font-weight: 800; font-size: 0.78rem; letter-spacing: 0.04em; min-width: 52px; height: 42px; padding: 0 10px; cursor: pointer;
+  color: var(--navy); background: var(--cream); border: var(--border); border-radius: 12px; box-shadow: var(--shadow);
+}
+.quality-toggle[aria-pressed='true'] { background: var(--navy); color: var(--cream); }
+.quality-toggle:focus-visible { outline: 3px solid var(--coral); outline-offset: 2px; }
 .sound-toggle { display: grid; place-items: center; width: 32px; height: 32px; color: var(--navy); background: none; border: 0; border-radius: 8px; cursor: pointer; }
 .sound-toggle:hover { background: var(--sand); }
 .sound-toggle:focus-visible, .sound input:focus-visible { outline: 3px solid var(--coral); outline-offset: 2px; }

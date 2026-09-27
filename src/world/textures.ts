@@ -175,6 +175,40 @@ export function woodMap() {
     }));
 }
 
+/** A single weathered board: long grain along u, a couple of knots, darker ends. Tinted by the material colour. */
+export function plankMap() {
+  return texture('plank', () =>
+    draw([256, 64], (g, w, h) => {
+      const r = rng(71);
+      g.fillStyle = '#fff';
+      g.fillRect(0, 0, w, h);
+      for (let i = 0; i < 34; i++) {
+        g.strokeStyle = `rgba(110,70,40,${0.06 + r() * 0.14})`;
+        g.lineWidth = 0.5 + r() * 1.4;
+        g.beginPath();
+        const y = r() * h;
+        g.moveTo(0, y);
+        g.bezierCurveTo(w * 0.33, y + (r() - 0.5) * 5, w * 0.66, y + (r() - 0.5) * 5, w, y + (r() - 0.5) * 3);
+        g.stroke();
+      }
+      for (let k = 0; k < 2; k++) {
+        const x = 40 + r() * (w - 80);
+        const y = 12 + r() * (h - 24);
+        g.fillStyle = 'rgba(90,55,30,0.35)';
+        g.beginPath();
+        g.ellipse(x, y, 5 + r() * 4, 2.5 + r() * 2, 0, 0, Math.PI * 2);
+        g.fill();
+      }
+      const fade = g.createLinearGradient(0, 0, w, 0);
+      fade.addColorStop(0, 'rgba(70,45,25,0.35)');
+      fade.addColorStop(0.06, 'rgba(70,45,25,0)');
+      fade.addColorStop(0.94, 'rgba(70,45,25,0)');
+      fade.addColorStop(1, 'rgba(70,45,25,0.35)');
+      g.fillStyle = fade;
+      g.fillRect(0, 0, w, h);
+    }));
+}
+
 /** Chevron tyre tread for the bump map; u runs around the tyre. */
 export function treadMap() {
   return texture('tread', () =>

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, type RefObject } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { CapsuleCollider, RigidBody, useRapier, type RapierCollider, type RapierRigidBody } from '@react-three/rapier';
 import * as THREE from 'three';
-import { npcRoutes, palette, pondDistance, type NpcRoute, type Waypoint } from './layout';
+import { groundHeight, npcRoutes, palette, pondDistance, riverDistance, RIVER_HALF_WIDTH, type NpcRoute, type Waypoint } from './layout';
 import { carState } from './carState';
 import { actors, type Actor } from './actors';
 import { boing } from '../ui/sound';
@@ -162,7 +162,8 @@ function Person({ route, seed }: { route: NpcRoute; seed: number }) {
         // a gentle nudge just shuffles them out of the way
         s.x += (dx / (carDist || 1)) * dt * 2.5;
         s.z += (dz / (carDist || 1)) * dt * 2.5;
-      } else if (s.state !== 'avoid' && carSpeed > DODGE_SPEED) {
+      } else if (s.state !== 'avoid' && carSpeed > DODGE_SPEED && groundHeight(s.x, s.z) === 0) {
+        // (no hopping aside on the bridge: there is only water past the rails)
         // Will the car pass within a metre or two in the next ~1.3 s? Then hop aside.
         const v2 = carVx * carVx + carVz * carVz;
         const t = (dx * carVx + dz * carVz) / v2;
@@ -176,7 +177,8 @@ function Person({ route, seed }: { route: NpcRoute; seed: number }) {
             px = -px;
             pz = -pz;
           }
-          if (pondDistance(s.x + px * DODGE_DISTANCE, s.z + pz * DODGE_DISTANCE) < 1.15) {
+          const wet = (x: number, z: number) => pondDistance(x, z) < 1.15 || riverDistance(x, z) < RIVER_HALF_WIDTH + 0.3;
+          if (wet(s.x + px * DODGE_DISTANCE, s.z + pz * DODGE_DISTANCE)) {
             px = -px;
             pz = -pz;
           }
@@ -328,7 +330,8 @@ function Person({ route, seed }: { route: NpcRoute; seed: number }) {
         s.yaw = turnToward(s.yaw, targetYaw, TURN_RATE * (run ? 2 : 1) * dt);
         yawQuat(s.yaw, tmp.q);
       }
-      rb.setNextKinematicTranslation({ x: s.x, y: s.y, z: s.z });
+      // walking over the bridge lifts them onto the deck
+      rb.setNextKinematicTranslation({ x: s.x, y: s.y + groundHeight(s.x, s.z), z: s.z });
       rb.setNextKinematicRotation(tmp.q);
     }
 

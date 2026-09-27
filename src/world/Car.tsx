@@ -3,7 +3,7 @@ import { useFrame, useThree } from '@react-three/fiber';
 import { CoefficientCombineRule, RigidBody, RoundCuboidCollider, useBeforePhysicsStep, useRapier, type CollisionEnterPayload, type RapierRigidBody } from '@react-three/rapier';
 import * as THREE from 'three';
 import { input, readDriveInput, useStore } from '../store';
-import { zones, pondDistance } from './layout';
+import { inRiver, pondDistance, zones } from './layout';
 import { impact, updateCarAudio, updateListener, type SurfaceMaterial } from '../ui/sound';
 import { emitImpact } from './impactQueue';
 import { CarModel } from './CarModel';
@@ -22,7 +22,7 @@ const RIDE_HEIGHT = 0.4; // distance from body centre to the bottom of the wheel
 const ROLLING_RESISTANCE = 2; // constant deceleration when coasting, m/s²
 const PARK_SPEED = 0.3; // below this with no throttle the parking brake holds the car
 const CAR_GRASS_RADIUS = 1.8;
-const WATER_SPEED = 0.45; // top speed multiplier while wading through the pond
+const WATER_SPEED = 0.45; // top speed multiplier while wading through the pond or the river
 const WATER_DRAG = 1.5;
 // Collisions: closing speed along the contact normal (m/s) below which nothing is heard, the speed that
 // counts as a full-strength crash, and how long the same collider stays quiet after making a sound.
@@ -177,7 +177,7 @@ export function Car() {
     }
 
     if (grounded) {
-      const wet = pondDistance(pos.x, pos.z) < 1;
+      const wet = pondDistance(pos.x, pos.z) < 1 || inRiver(pos.x, pos.z);
       const top = (drive.boost ? BOOST_SPEED : MAX_SPEED) * (wet ? WATER_SPEED : 1);
       let push = 0;
       if (drive.throttle > 0 && fwdSpeed < top) push = drive.throttle * ACCEL * (drive.boost ? 1.35 : 1);

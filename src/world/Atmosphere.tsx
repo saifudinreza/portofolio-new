@@ -3,7 +3,7 @@ import { useFrame } from '@react-three/fiber';
 import { Environment, Lightformer } from '@react-three/drei';
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
-import { WORLD_SIZE, palette, rng } from './layout';
+import { RIVER_HALF_WIDTH, WORLD_SIZE, palette, riverDistance, rng } from './layout';
 
 const HALF = WORLD_SIZE / 2;
 export const SEA_LEVEL = -1.4;
@@ -180,6 +180,8 @@ export function Cliffs() {
         const out = HALF + 0.4 + r() * 1.2;
         const s = 1.1 + r() * 1.3;
         const [x, z] = side === 0 ? [t, -out] : side === 1 ? [t, out] : side === 2 ? [-out, t] : [out, t];
+        // leave a gap where the river spills over the edge as a waterfall
+        if (riverDistance(x, z) < RIVER_HALF_WIDTH + 2.6) continue;
         rocks.push({ x, z, y: -1.6 + r() * 1.1, s, yaw: r() * Math.PI * 2, tilt: (r() - 0.5) * 0.5 });
       }
     }

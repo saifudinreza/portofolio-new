@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react';
 import { useStore } from '../store';
 import { carState } from '../world/carState';
 import { actors } from '../world/actors';
-import { WORLD_SIZE, aboutArea, contactPads, palette, pond, projectPadPositions, roadSegments, trails, warehouse } from '../world/layout';
+import { RIVER_HALF_WIDTH, WORLD_SIZE, aboutArea, bridge, contactPads, palette, pond, projectPadPositions, riverPath, roadSegments, trails, warehouse } from '../world/layout';
 
 const HALF = WORLD_SIZE / 2;
 const MAX_KMH = 70; // a little over boost top speed (19 m/s ≈ 68 km/h)
@@ -20,6 +20,13 @@ function drawStaticMap(size: number, dpr: number) {
   g.fillStyle = '#E9D3A6';
   g.fillRect(0, 0, size, size);
   g.lineCap = 'round';
+  g.lineJoin = 'round';
+  // river under everything else
+  g.strokeStyle = '#6CC7BA';
+  g.lineWidth = RIVER_HALF_WIDTH * 2 * s;
+  g.beginPath();
+  riverPath.forEach((p, i) => (i ? g.lineTo(px(p.x), px(p.z)) : g.moveTo(px(p.x), px(p.z))));
+  g.stroke();
   g.strokeStyle = '#D0B07E';
   g.lineWidth = Math.max(2, 3 * s);
   for (const [x1, z1, x2, z2] of roadSegments) {
@@ -37,6 +44,13 @@ function drawStaticMap(size: number, dpr: number) {
     g.stroke();
   }
   g.setLineDash([]);
+  // the bridge: a wooden bar across the water, along the road
+  g.save();
+  g.translate(px(bridge.x), px(bridge.z));
+  g.rotate(-bridge.yaw);
+  g.fillStyle = palette.woodDark;
+  g.fillRect(-bridge.halfWidth * s * 1.4, -bridge.deckHalf * s, bridge.halfWidth * s * 2.8, bridge.deckHalf * s * 2);
+  g.restore();
 
   g.fillStyle = '#6CC7BA';
   g.beginPath();

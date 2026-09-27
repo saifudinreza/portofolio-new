@@ -8,9 +8,9 @@ An interactive portfolio where you drive a small car around an island to explore
 | --- | --- | --- |
 | ![Projects](docs/projects.jpg) | ![Skills](docs/skills.jpg) | ![Pond](docs/pond.jpg) |
 
-| The car | Mobile |
-| --- | --- |
-| ![Car](docs/car.jpg) | ![Mobile](docs/mobile.png) |
+| River & bridge | The car | Classic view | Mobile |
+| --- | --- | --- | --- |
+| ![River and bridge](docs/river.jpg) | ![Car](docs/car.jpg) | ![Classic view](docs/classic.jpg) | ![Mobile](docs/mobile.png) |
 
 ## What's in the world
 
@@ -19,6 +19,7 @@ An interactive portfolio where you drive a small car around an island to explore
 - **Skills (the warehouse)**: a stack of knockable crates labelled with my stack, a nod to my day job as a warehouse operator.
 - **About**: education, certifications and work experience.
 - **Contact**: GitHub, LinkedIn and email pads.
+- **River and bridge**: a river winds from the north shore past Home and out to the east, spilling off the cliffs as a waterfall at both ends. A wooden bridge carries the Projects road over it; anywhere else you can wade across (slowly, with a splash).
 - A jump ramp and a cone slalom, just for fun.
 - **Classic view**: the whole portfolio as a normal scrollable page, for recruiters in a hurry and for devices without WebGL.
 
@@ -39,7 +40,7 @@ Graphics quality is **Auto** by default and can be fixed to Low, Medium or High 
 - **Loading in stages.** The page first paints a static loader from `index.html`, then a small React chunk (about 81 kB gzipped) for the UI. The 3D chunk (three.js, R3F, drei, Rapier, the world: about 1.2 MB gzipped) only starts downloading on the first mouse move, touch, key or wheel, or 4 s after the page has loaded, so opening the link costs little and the landing page stays responsive. Post-processing (about 162 kB gzipped) is its own chunk and only loads on High.
 - **No asset files to compress.** Every texture is drawn on a canvas at startup and the car, props and sounds are generated in code, so there are no `.glb`, KTX2 or audio files.
 - **Lighthouse** (production build, Lighthouse 12, landing page): desktop 99 performance / 100 accessibility / 100 best practices / 100 SEO; mobile 87 to 89 performance on repeat runs (one cold first run scored 55) with 100 on the rest. Lighthouse runs headless without a GPU, so these scores describe the landing page before the 3D world loads; the frame rates below describe the world itself.
-- **Frame rate** (production build, driving at home, 1422×647 at 1.35 DPR, integrated AMD Radeon, Playwright Chromium): Low about 28 to 35 FPS, Medium about 22, High about 18 to 20. The previous release measured about 23 FPS in its Lite mode in the same session, so Low is roughly 30% faster than before. That machine and browser are slower than the earlier measurements, so the ≥ 55 FPS target for mid-range laptops is not confirmed yet; Auto falls back to Low on such hardware.
+- **Frame rate** (production build, driving from Home, 1422×647 at 1.35 DPR, integrated AMD Radeon, Playwright Chromium): Low about 63 to 68 FPS, High about 30 to 36 (Medium not measured). An earlier session on the same laptop gave only 28 to 35 on Low, so the machine's own state swings the numbers a lot; compare builds within one session. The river and bridge made no measurable difference.
 - The car is built from rounded primitives: clearcoat paint, see-through glass with seats inside, chrome grille and five-spoke rims, bulging tyres with tread, `REZA` plates, working brake lights, a headlight pool on the ground, visual suspension and a flapping antenna flag. Driving kicks up dust, braking and sliding leave skid marks, the exhaust smokes and boost lights a flame.
 - The island has a sky dome with drifting clouds, a sea with foam around rocky cliffs, a sandy ground with a normal map, roads with ragged edges and wheel ruts, bushes, flowers, fences, street lamps, benches, butterflies and leaves on the wind.
 - Motion respects `prefers-reduced-motion`: no camera shake, a still intro view and instant UI transitions.
@@ -99,6 +100,8 @@ src/
     textures.ts          procedural canvas textures (sand, roads, wood, tyre tread)
     Letters.tsx          knockable 3D letters
     Zones.tsx            projects, warehouse, about and contact areas
+    River.tsx            river water, bed, banks, pebbles, reeds, waterfalls and splashes
+    Bridge.tsx           wooden bridge over the river, with rails and colliders
     Environment.tsx      ground, roads, ramp, cones, sun
     Props.tsx            little models that float over each project pad
     common.tsx           sensors, ground text, signboards

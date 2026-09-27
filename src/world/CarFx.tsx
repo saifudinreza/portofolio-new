@@ -3,7 +3,7 @@ import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { useStore } from '../store';
 import { carState } from './carState';
-import { pondDistance } from './layout';
+import { groundHeight, inRiver, pondDistance } from './layout';
 
 const MAX_PUFFS = 120;
 const MAX_SKIDS = 400;
@@ -83,7 +83,7 @@ export function CarFx() {
     const now = clock.elapsedTime;
     const { m, q, p, s } = fx;
     const speed = Math.abs(carState.speed);
-    const wet = pondDistance(carState.x, carState.z) < 1;
+    const wet = pondDistance(carState.x, carState.z) < 1 || inRiver(carState.x, carState.z);
     const onGround = carState.grounded && !wet;
     const back = -Math.sign(carState.speed || 1);
     const [fwdX, fwdZ] = [Math.sin(carState.yaw), Math.cos(carState.yaw)];
@@ -95,7 +95,7 @@ export function CarFx() {
         fx.dustDebt -= 1;
         const [lx, lz] = REAR_WHEELS[Math.random() < 0.5 ? 0 : 1];
         const [wx, wz] = toWorld(lx, lz);
-        spawn(wx, 0.12, wz, '#E6D3AA', 0.12 + speed * 0.012, fwdX * back * 1.2 + (Math.random() - 0.5), 0.5 + Math.random() * 0.6, fwdZ * back * 1.2 + (Math.random() - 0.5), 0.6 + Math.random() * 0.5);
+        spawn(wx, 0.12 + groundHeight(wx, wz), wz, '#E6D3AA', 0.12 + speed * 0.012, fwdX * back * 1.2 + (Math.random() - 0.5), 0.5 + Math.random() * 0.6, fwdZ * back * 1.2 + (Math.random() - 0.5), 0.6 + Math.random() * 0.5);
       }
     }
 
@@ -147,7 +147,7 @@ export function CarFx() {
       const len = Math.hypot(dx, dz);
       if (len < 0.25) return;
       q.setFromAxisAngle(fx.up, Math.atan2(dx, dz));
-      fx.skidMesh.setMatrixAt(fx.skidIndex, m.compose(p.set((x + last.x) / 2, 0.014, (z + last.z) / 2), q, s.set(1, 1, len)));
+      fx.skidMesh.setMatrixAt(fx.skidIndex, m.compose(p.set((x + last.x) / 2, 0.014 + groundHeight((x + last.x) / 2, (z + last.z) / 2), (z + last.z) / 2), q, s.set(1, 1, len)));
       fx.skidIndex = (fx.skidIndex + 1) % MAX_SKIDS;
       fx.skidMesh.instanceMatrix.needsUpdate = true;
       fx.lastSkid[w] = { x, z };

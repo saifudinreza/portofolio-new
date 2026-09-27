@@ -2,10 +2,12 @@ import { useEffect, useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { BallCollider, RigidBody } from '@react-three/rapier';
 import * as THREE from 'three';
+import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { RIVER_BANK, RIVER_HALF_WIDTH, RIVER_WATER, WORLD_SIZE, bridge, distanceToSegment, inRiver, palette, riverPath, rng, roadSegments, type RiverPoint } from './layout';
 import { SEA_LEVEL } from './Atmosphere';
 import { actors, type Actor } from './actors';
 import { splash } from '../ui/sound';
+import { mossyStoneMaterial, rockGeometry } from './stone';
 import { useStore, type Tier } from '../store';
 
 const HALF = WORLD_SIZE / 2;
@@ -244,37 +246,6 @@ function fallGeometry(p: RiverPoint, outward: 1 | -1) {
 
 // ---------- rocks and reeds ----------
 
-/** Lumpy smooth pebble: an icosphere pushed in and out by a few sines, so no two sides look alike. */
-function pebbleGeometry(seed: number) {
-  const g = new THREE.IcosahedronGeometry(1, 2);
-  const p = g.getAttribute('position');
-  const v = new THREE.Vector3();
-  for (let i = 0; i < p.count; i++) {
-    v.fromBufferAttribute(p, i);
-    const k = 1 + 0.13 * Math.sin(v.x * 3.1 + seed) * Math.sin(v.y * 2.7 + seed * 2) + 0.08 * Math.sin(v.z * 5.3 + seed * 3);
-    v.multiplyScalar(k);
-    p.setXYZ(i, v.x, v.y, v.z);
-  }
-  g.computeVertexNormals();
-  return g;
-}
-
-/** Stone with a mossy green tint on whatever faces up. */
-function mossyStone() {
-  const material = new THREE.MeshStandardMaterial({ roughness: 0.9 });
-  material.onBeforeCompile = (shader) => {
-    shader.vertexShader = 'varying float vUp;\n' + shader.vertexShader.replace(
-      '#include <beginnormal_vertex>',
-      '#include <beginnormal_vertex>\nvUp = normalize(mat3(modelMatrix) * mat3(instanceMatrix) * objectNormal).y;',
-    );
-    shader.fragmentShader = 'varying float vUp;\n' + shader.fragmentShader.replace(
-      '#include <color_fragment>',
-      '#include <color_fragment>\ndiffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.36, 0.52, 0.27), smoothstep(0.55, 0.95, vUp) * 0.6);',
-    );
-  };
-  return material;
-}
-
 /** Reed blades lean and sway from their base; the base (y = 0) stays put. */
 function reedMaterial(time: THREE.IUniform) {
   const material = new THREE.MeshStandardMaterial({ roughness: 0.8, side: THREE.DoubleSide });
@@ -316,7 +287,8 @@ export function River() {
       const col = c === 0 ? wet : dry;
       return [col.r, col.g, col.b, c === 2 ? 0 : 1];
     };
-    const banks = [1, -1].map((side) => {
+    // both banks in one mesh (and below, both waterfalls and both foam patches): one draw call each
+    const bankGeometries = [1, -1].map((side) => {
       // three columns: water line, dry sand, faded edge; the outer column wobbles for a natural edge
       const geom = ribbon(side * (H - 0.3), side * (H + RIVER_BANK), 0.009, 3, bankColor);
       const pos = geom.getAttribute('position');
@@ -329,10 +301,10 @@ export function River() {
         pos.setX(i, pos.getX(i) - p.tz * side * wobble);
         pos.setZ(i, pos.getZ(i) + p.tx * side * wobble);
       }
-      const mesh = new THREE.Mesh(geom, bankMaterial);
-      mesh.receiveShadow = true;
-      return mesh;
+      return geom;
     });
+    const banks = new THREE.Mesh(mergeGeometries(bankGeometries)!, bankMaterial);
+    banks.receiveShadow = true;
 
     // Pebbles along both water lines, boulders a little further up the banks.
     const matrix = new THREE.Matrix4();
@@ -360,14 +332,14 @@ export function River() {
       if (nearCrossing(x, z) || Math.max(Math.abs(x), Math.abs(z)) > HALF - 2 || boulders.some((b) => Math.hypot(b.x - x, b.z - z) < 3)) continue;
       boulders.push({ x, z, s });
     }
-    const stone = mossyStone();
-    const pebbleMesh = new THREE.InstancedMesh(pebbleGeometry(1), stone, pebbles.length);
+    const stone = mossyStoneMaterial();
+    const pebbleMesh = new THREE.InstancedMesh(rockGeometry(1, 1), stone, pebbles.length);
     pebbles.forEach((k, i) => {
       pebbleMesh.setMatrixAt(i, matrix.compose(v.set(k.x, k.s * 0.2, k.z), q.setFromEuler(e.set(0, r() * 6.3, 0)), sc.set(k.s * (1 + r() * 0.5), k.s * 0.55, k.s)));
       pebbleMesh.setColorAt(i, color.set(r() < 0.3 ? '#C9BBA2' : palette.rock).offsetHSL(0, 0, (r() - 0.5) * 0.14));
     });
     pebbleMesh.receiveShadow = true;
-    const boulderMesh = new THREE.InstancedMesh(pebbleGeometry(4), stone, boulders.length);
+    const boulderMesh = new THREE.InstancedMesh(rockGeometry(4), stone, boulders.length);
     boulders.forEach((k, i) => {
       boulderMesh.setMatrixAt(i, matrix.compose(v.set(k.x, k.s * 0.35, k.z), q.setFromEuler(e.set((r() - 0.5) * 0.3, r() * 6.3, (r() - 0.5) * 0.3)), sc.set(k.s * 1.2, k.s * 0.8, k.s)));
       boulderMesh.setColorAt(i, color.set(palette.rock).offsetHSL(0, 0, (r() - 0.5) * 0.12));
@@ -416,15 +388,13 @@ export function River() {
     });
     // the path runs from the north mouth to the east mouth, so "outward" is upstream at the start, downstream at the end
     const mouths: [RiverPoint, 1 | -1][] = [[onIsland[0], -1], [onIsland[onIsland.length - 1], 1]];
-    const falls = mouths.map(([p, out]) => new THREE.Mesh(fallGeometry(p, out), fallMaterial));
+    const falls = new THREE.Mesh(mergeGeometries(mouths.map(([p, out]) => fallGeometry(p, out)))!, fallMaterial);
     // foam where each fall hits the sea
     const foamMaterial = new THREE.MeshBasicMaterial({ color: '#FFFDF7', transparent: true, opacity: 0.4, depthWrite: false });
-    const foams = mouths.map(([p, out]) => {
-      const mesh = new THREE.Mesh(new THREE.CircleGeometry(1, 20).rotateX(-Math.PI / 2), foamMaterial);
-      mesh.position.set(p.x + p.tx * out * 1.9, SEA_LEVEL + 0.12, p.z + p.tz * out * 1.9);
-      mesh.scale.set(H * 1.1, 1, H * 1.1);
-      return mesh;
-    });
+    const foams = new THREE.Mesh(
+      mergeGeometries(mouths.map(([p, out]) => new THREE.CircleGeometry(1, 20).rotateX(-Math.PI / 2).scale(H * 1.1, 1, H * 1.1).translate(p.x + p.tx * out * 1.9, SEA_LEVEL + 0.12, p.z + p.tz * out * 1.9)))!,
+      foamMaterial,
+    );
 
     // Splash droplets.
     const dropMesh = new THREE.InstancedMesh(
@@ -525,19 +495,13 @@ export function River() {
         ))}
       </RigidBody>
       <primitive object={scene.bed} />
-      {scene.banks.map((b, i) => (
-        <primitive key={i} object={b} />
-      ))}
+      <primitive object={scene.banks} />
       <primitive object={scene.water} />
       <primitive object={scene.pebbleMesh} />
       <primitive object={scene.boulderMesh} />
       <primitive object={scene.reedMesh} />
-      {scene.falls.map((f, i) => (
-        <primitive key={i} object={f} />
-      ))}
-      {scene.foams.map((f, i) => (
-        <primitive key={i} object={f} />
-      ))}
+      <primitive object={scene.falls} />
+      <primitive object={scene.foams} />
       <primitive object={scene.dropMesh} />
     </group>
   );

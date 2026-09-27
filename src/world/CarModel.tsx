@@ -1,4 +1,4 @@
-import { useMemo, useRef, type MutableRefObject } from 'react';
+import { useLayoutEffect, useMemo, useRef, type MutableRefObject } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { RoundedBox, Text } from '@react-three/drei';
 import * as THREE from 'three';
@@ -20,7 +20,8 @@ const TYRE_W = 0.26;
 
 function useCarMaterials() {
   return useMemo(() => {
-    const paint = new THREE.MeshPhysicalMaterial({ color: palette.navy, metalness: 0.45, roughness: 0.32, clearcoat: 1, clearcoatRoughness: 0.08 });
+    // metalness kept low: more of it darkens the navy toward black from the top-down camera
+    const paint = new THREE.MeshPhysicalMaterial({ color: palette.navy, metalness: 0.2, roughness: 0.34, clearcoat: 1, clearcoatRoughness: 0.08 });
     const cream = new THREE.MeshPhysicalMaterial({ color: palette.cream, roughness: 0.4, clearcoat: 0.8, clearcoatRoughness: 0.15 });
     const teal = new THREE.MeshPhysicalMaterial({ color: palette.teal, roughness: 0.35, clearcoat: 1, clearcoatRoughness: 0.1 });
     const glass = new THREE.MeshPhysicalMaterial({ color: '#2E4250', metalness: 0.2, roughness: 0.05, transparent: true, opacity: 0.55, clearcoat: 1, envMapIntensity: 1.8, depthWrite: false });
@@ -157,6 +158,50 @@ function fenderGeometry() {
   }))!;
 }
 
+/**
+ * Bake every mesh under `root` into one merged mesh per material. The jeep is ~55 small static meshes (tubes,
+ * grille slots, bevelled boxes); drawn one by one they cost a draw call each, twice with shadows, every frame.
+ * Merged they cost one per material, and the shape is untouched.
+ */
+function useMergeStatic(root: MutableRefObject<THREE.Group | null>) {
+  useLayoutEffect(() => {
+    const group = root.current;
+    if (!group) return;
+    group.updateWorldMatrix(true, true);
+    const toLocal = group.matrixWorld.clone().invert();
+    const byMaterial = new Map<THREE.Material, THREE.BufferGeometry[]>();
+    const originals: THREE.Mesh[] = [];
+    group.traverse((o) => {
+      const mesh = o as THREE.Mesh;
+      if (!mesh.isMesh || Array.isArray(mesh.material)) return;
+      const g = (mesh.geometry.index ? mesh.geometry.toNonIndexed() : mesh.geometry.clone()).applyMatrix4(new THREE.Matrix4().multiplyMatrices(toLocal, mesh.matrixWorld));
+      // keep only what every part has, so they merge: position, normal and a (possibly blank) uv
+      for (const name of Object.keys(g.attributes)) if (!['position', 'normal', 'uv'].includes(name)) g.deleteAttribute(name);
+      if (!g.getAttribute('uv')) g.setAttribute('uv', new THREE.Float32BufferAttribute(new Float32Array(g.getAttribute('position').count * 2), 2));
+      const list = byMaterial.get(mesh.material) ?? [];
+      list.push(g);
+      byMaterial.set(mesh.material, list);
+      originals.push(mesh);
+    });
+    for (const m of originals) m.visible = false;
+    const merged: THREE.Mesh[] = [];
+    for (const [material, parts] of byMaterial) {
+      const mesh = new THREE.Mesh(mergeGeometries(parts)!, material);
+      mesh.castShadow = !(material as THREE.MeshPhysicalMaterial).transparent;
+      mesh.receiveShadow = true;
+      group.add(mesh);
+      merged.push(mesh);
+    }
+    return () => {
+      for (const m of merged) {
+        group.remove(m);
+        m.geometry.dispose();
+      }
+      for (const m of originals) m.visible = true;
+    };
+  }, [root]);
+}
+
 type Refs = {
   chassis: MutableRefObject<THREE.Group | null>;
   wheels: MutableRefObject<(THREE.Group | null)[]>;
@@ -175,6 +220,8 @@ export function CarModel({ chassis, wheels, frontPivots }: Refs) {
   const rim = useMemo(() => rimGeometry(), []);
   const fender = useMemo(() => fenderGeometry(), []);
   const suspension = useRef<THREE.Group>(null);
+  const staticParts = useRef<THREE.Group>(null);
+  useMergeStatic(staticParts);
   const spring = useRef({ y: 0, v: 0, lastVy: 0 });
   const beam = useRef<THREE.Mesh>(null);
   // Headlight pool painted on the ground: an additive glow decal instead of real spotlights, which
@@ -208,6 +255,7 @@ export function CarModel({ chassis, wheels, frontPivots }: Refs) {
     <>
       <group ref={chassis}>
         <group ref={suspension}>
+          <group ref={staticParts}>
           {/* tub and the raised bonnet section, boxy with bevelled edges */}
           <RoundedBox args={[1.14, 0.4, 1.46]} radius={0.06} smoothness={3} position={[0, 0.05, -0.2]} material={mats.paint} castShadow />
           <RoundedBox args={[1.06, 0.36, 0.72]} radius={0.06} smoothness={3} position={[0, 0.12, 0.64]} material={mats.paint} castShadow />
@@ -290,6 +338,8 @@ export function CarModel({ chassis, wheels, frontPivots }: Refs) {
               <RoundedBox args={[0.05, 0.08, 0.1]} radius={0.015} smoothness={2} material={mats.paint} castShadow />
             </group>
           ))}
+          </group>
+          {/* plates (text) and the flapping flag stay separate from the merged body */}
           <Plate z={1.135} />
           <Plate z={-1.06} flip />
           {/* antenna with the signature coral flag, on the rear corner */}

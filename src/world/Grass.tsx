@@ -6,11 +6,12 @@ import { actors } from './actors';
 import { useStore, type Tier } from '../store';
 
 const HALF = WORLD_SIZE / 2;
-const SEGMENTS = 5;
-const MAX_STAMPS = 16;
-const GRASS_DENSITY: Record<Tier, number> = { low: 0.45, medium: 0.75, high: 1 };
+// Every vertex runs the wind and footprint maths, so blades keep few segments; four still bend smoothly.
+const SEGMENTS = 4;
+const MAX_STAMPS = 12;
+const GRASS_DENSITY: Record<Tier, number> = { low: 0.4, medium: 0.75, high: 1 };
 /** Low also trims the blades a little: fewer grass pixels to shade, which is what low-end GPUs struggle with. */
-const GRASS_HEIGHT: Record<Tier, number> = { low: 0.78, medium: 1, high: 1 };
+const GRASS_HEIGHT: Record<Tier, number> = { low: 0.62, medium: 0.9, high: 1 };
 const TRAIL_SECONDS = 2.2;
 const TRAIL_SPACING = 0.9;
 const textClear: [number, number, number][] = [

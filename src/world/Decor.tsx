@@ -5,7 +5,7 @@ import { BallCollider, CuboidCollider, CylinderCollider, RigidBody, type RapierR
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
-import { WORLD_SIZE, aboutArea, contactPads, distanceToSegment, isClear, palette, pondDistance, projectPadPositions, rng, roadSegments, trails, warehouse, zones } from './layout';
+import { RIVER_BANK, RIVER_HALF_WIDTH, WORLD_SIZE, aboutArea, contactPads, distanceToSegment, isClear, palette, pondDistance, projectPadPositions, riverDistance, rng, roadSegments, trails, warehouse, zones } from './layout';
 import { projects } from '../data/profile';
 import { carState } from './carState';
 import { useStore, type Tier } from '../store';
@@ -58,7 +58,9 @@ function pavingGeometry(a: Area) {
       const z = a.z - hz + (j * hz * 2) / nz;
       const wobble = 0.35 * Math.sin(x * 1.3 + z * 0.7) + 0.25 * Math.sin(x * 0.45 - z * 1.9) + 0.15 * Math.sin(x * 3.1 + z * 2.3);
       const d = areaDistance(a, x, z) + wobble;
-      const alpha = THREE.MathUtils.clamp(-d / 0.7, 0, 1);
+      // the projects courtyard runs up to the river: let the sandy bank show instead of paving into the water
+      const bank = THREE.MathUtils.clamp((riverDistance(x, z) - RIVER_HALF_WIDTH - RIVER_BANK * 0.6) / 1.2, 0, 1);
+      const alpha = THREE.MathUtils.clamp(-d / 0.7, 0, 1) * bank;
       pos.push(x, 0, z);
       uv.push(x / 3.2, z / 3.2);
       col.push(1, 1, 1, alpha);
@@ -117,6 +119,7 @@ function useGroundDetail() {
     for (let guard = 0; leaves.length < 320 && guard < 20000; guard++) {
       const x = (r() * 2 - 1) * (HALF - 2);
       const z = (r() * 2 - 1) * (HALF - 2);
+      if (riverDistance(x, z) < RIVER_HALF_WIDTH + 0.6) continue;
       if (roadDistance(x, z) < 1.7 || onPaving(x, z)) leaves.push({ x, z });
     }
     const leafMesh = new THREE.InstancedMesh(

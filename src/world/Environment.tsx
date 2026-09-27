@@ -28,8 +28,9 @@ export function Lights() {
       <directionalLight
         ref={sun}
         target={target}
-        intensity={2.2}
-        color="#FFE9C7"
+        // warm late-afternoon sun; the split-tone grade on High cools the shadows toward the sea's teal
+        intensity={2.3}
+        color="#FFE2B6"
         // the shadow pass re-renders every caster, the first thing to go on low
         castShadow={tier !== 'low'}
         shadow-mapSize={[2048, 2048]}

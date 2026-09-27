@@ -5,7 +5,7 @@ import * as THREE from 'three';
 import { WORLD_SIZE, distanceToSegment, isClear, pondDistance, rng, trails } from './layout';
 import { actors, type Actor } from './actors';
 import { carState } from './carState';
-import { barkMap, leafClusterMap, needleMap, singleLeafMap } from './textures';
+import { barkMap, leafClusterMap, needleMap, singleLeafMap } from './foliageTextures';
 import { canopyGeometry, coreGeometry, kinds, setCardShare, trunkGeometry } from './foliage';
 import { useStore, type Tier } from '../store';
 

@@ -3,7 +3,7 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { palette, rng } from './layout';
-import { leafClusterMap } from './textures';
+import { leafClusterMap } from './foliageTextures';
 import type { Tier } from '../store';
 
 /** Share of leaf cards drawn per tier; the solid core behind them keeps a thinner canopy looking full. */

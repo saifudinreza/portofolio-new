@@ -21,3 +21,36 @@ export function honk() {
     // Audio is a nice-to-have; ignore browsers that block it.
   }
 }
+
+/** Dull knock plus a leafy rustle for bumping into a tree; strength 0..1. */
+export function thud(strength = 1) {
+  try {
+    ctx ??= new AudioContext();
+    const now = ctx.currentTime;
+    const knock = ctx.createOscillator();
+    const knockGain = ctx.createGain();
+    knock.frequency.setValueAtTime(140, now);
+    knock.frequency.exponentialRampToValueAtTime(50, now + 0.2);
+    knockGain.gain.setValueAtTime(0.3 * strength + 0.01, now);
+    knockGain.gain.exponentialRampToValueAtTime(0.0001, now + 0.25);
+    knock.connect(knockGain).connect(ctx.destination);
+    knock.start(now);
+    knock.stop(now + 0.26);
+
+    const len = Math.floor(ctx.sampleRate * 0.4);
+    const buf = ctx.createBuffer(1, len, ctx.sampleRate);
+    const data = buf.getChannelData(0);
+    for (let i = 0; i < len; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / len) ** 2;
+    const rustle = ctx.createBufferSource();
+    const filter = ctx.createBiquadFilter();
+    const rustleGain = ctx.createGain();
+    rustle.buffer = buf;
+    filter.type = 'bandpass';
+    filter.frequency.value = 2800;
+    rustleGain.gain.value = 0.15 * strength;
+    rustle.connect(filter).connect(rustleGain).connect(ctx.destination);
+    rustle.start(now + 0.02);
+  } catch {
+    // Audio is a nice-to-have; ignore browsers that block it.
+  }
+}

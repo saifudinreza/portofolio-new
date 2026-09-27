@@ -1,8 +1,8 @@
 import { useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
-import { CuboidCollider, CylinderCollider, RigidBody } from '@react-three/rapier';
+import { CuboidCollider, RigidBody } from '@react-three/rapier';
 import * as THREE from 'three';
-import { WORLD_SIZE, isClear, palette, rng, roadSegments } from './layout';
+import { WORLD_SIZE, palette, roadSegments } from './layout';
 import { carState } from './carState';
 import { BODY_FONT, GroundText } from './common';
 
@@ -86,62 +86,6 @@ export function Paths() {
       <GroundText position={[-9, 3.2]} size={0.5} color={palette.woodDark} rotation={-0.2}>SKILLS</GroundText>
       <GroundText position={[-6, 12]} size={0.5} color={palette.woodDark} rotation={0.5}>ABOUT</GroundText>
       <GroundText position={[6.5, 12]} size={0.5} color={palette.woodDark} rotation={-0.45}>CONTACT</GroundText>
-    </group>
-  );
-}
-
-export function Trees() {
-  const trees = useMemo(() => {
-    const r = rng(7);
-    const out: { x: number; z: number; s: number; kind: number }[] = [];
-    let guard = 0;
-    while (out.length < 70 && guard++ < 3000) {
-      const x = (r() * 2 - 1) * (HALF - 3);
-      const z = (r() * 2 - 1) * (HALF - 3);
-      if (!isClear(x, z)) continue;
-      if (out.some((t) => Math.hypot(t.x - x, t.z - z) < 3.2)) continue;
-      out.push({ x, z, s: 0.8 + r() * 0.7, kind: Math.floor(r() * 3) });
-    }
-    return out;
-  }, []);
-
-  return (
-    <group>
-      {trees.map((t, i) => (
-        <RigidBody key={i} type="fixed" colliders={false} position={[t.x, 0, t.z]}>
-          <CylinderCollider args={[1.2 * t.s, 0.3 * t.s]} position={[0, 1.2 * t.s, 0]} />
-          <group scale={t.s}>
-            <mesh position={[0, 0.6, 0]} castShadow>
-              <cylinderGeometry args={[0.16, 0.24, 1.2, 7]} />
-              <meshStandardMaterial color={palette.woodDark} />
-            </mesh>
-            {t.kind === 0 && (
-              <mesh position={[0, 1.9, 0]} castShadow>
-                <coneGeometry args={[1, 2.2, 7]} />
-                <meshStandardMaterial color={palette.leafDark} flatShading />
-              </mesh>
-            )}
-            {t.kind === 1 && (
-              <mesh position={[0, 1.8, 0]} castShadow>
-                <icosahedronGeometry args={[1, 0]} />
-                <meshStandardMaterial color={palette.leaf} flatShading />
-              </mesh>
-            )}
-            {t.kind === 2 && (
-              <>
-                <mesh position={[0, 1.6, 0]} castShadow>
-                  <dodecahedronGeometry args={[0.85, 0]} />
-                  <meshStandardMaterial color={palette.yellow} flatShading />
-                </mesh>
-                <mesh position={[0.3, 2.3, 0.1]} castShadow>
-                  <dodecahedronGeometry args={[0.55, 0]} />
-                  <meshStandardMaterial color="#E9A93A" flatShading />
-                </mesh>
-              </>
-            )}
-          </group>
-        </RigidBody>
-      ))}
     </group>
   );
 }

@@ -13,6 +13,8 @@ export type Project = {
   stack: string[];
   highlights: string[];
   links: ProjectLink[];
+  /** optional screenshot (e.g. '/projects/kasirai.jpg' in public/); without one the card shows a coloured cover */
+  image?: string;
   /** which little 3D prop sits on the project pad */
   prop: 'register' | 'house' | 'coins' | 'sofa' | 'bag' | 'key';
 };

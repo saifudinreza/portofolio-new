@@ -1,16 +1,44 @@
-import { Suspense, lazy, useEffect, useMemo } from 'react';
-import { Canvas } from '@react-three/fiber';
+import { Suspense, lazy, useEffect, useMemo, useState } from 'react';
 import { input, resetInput, useStore } from './store';
 import { Classic } from './ui/Classic';
 import { InputDebug, KeyHints, Loader, TopBar, TouchControls } from './ui/Hud';
+import { DriveHud } from './ui/DriveHud';
 import { SpotCard } from './ui/SpotCard';
 import { primaryLink } from './ui/primaryLink';
 
-// The 3D world (three.js + Rapier WASM) is the heavy part, so it loads in its own chunk
-// while the loader and classic view are already usable.
-const Experience = lazy(() => import('./world/Experience').then((m) => ({ default: m.Experience })));
+// The 3D side (three.js, R3F, drei, Rapier WASM) is the heavy part, so the canvas and world load in their
+// own chunk; this main chunk is just React + the HTML UI, which paints the loader and classic view at once.
+const Scene = lazy(() => import('./world/Scene'));
 
 const DRIVE_KEYS = ['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Space'];
+const INTENT_EVENTS = ['pointermove', 'pointerdown', 'keydown', 'touchstart', 'wheel'] as const;
+/** Fallback for visitors who don't touch anything: start this long after the page has finished loading. */
+const IDLE_START_MS = 4000;
+
+/**
+ * Start fetching and building the 3D world on the first sign of a real visitor (mouse move, touch, key,
+ * wheel), or a few seconds after the page has loaded if nothing happens. The landing page (loader, top bar,
+ * classic view) paints and responds straight away instead of competing with megabytes of 3D setup, and
+ * nobody downloads the 1.2 MB 3D chunk just by opening the link.
+ */
+function useLoadIntent() {
+  const [go, setGo] = useState(false);
+  useEffect(() => {
+    if (go) return;
+    const fire = () => setGo(true);
+    for (const e of INTENT_EVENTS) window.addEventListener(e, fire, { once: true, passive: true });
+    let timer = 0;
+    const arm = () => (timer = window.setTimeout(fire, IDLE_START_MS));
+    if (document.readyState === 'complete') arm();
+    else window.addEventListener('load', arm, { once: true });
+    return () => {
+      for (const e of INTENT_EVENTS) window.removeEventListener(e, fire);
+      window.removeEventListener('load', arm);
+      window.clearTimeout(timer);
+    };
+  }, [go]);
+  return go;
+}
 
 function hasWebGL() {
   try {
@@ -26,6 +54,7 @@ export default function App() {
   const setClassic = useStore((s) => s.setClassic);
   const webgl = useMemo(() => hasWebGL(), []);
   const debug = useMemo(() => new URLSearchParams(location.search).has('debug'), []);
+  const loadScene = useLoadIntent();
 
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
@@ -71,17 +100,13 @@ export default function App() {
 
   return (
     <>
-      <Canvas
-        shadows
-        dpr={[1, 1.75]}
-        camera={{ fov: 38, near: 0.5, far: 200, position: [9, 13, 19] }}
-        gl={{ antialias: true, powerPreference: 'high-performance' }}
-      >
+      {loadScene && (
         <Suspense fallback={null}>
-          <Experience debug={debug} />
+          <Scene debug={debug} />
         </Suspense>
-      </Canvas>
+      )}
       <TopBar />
+      <DriveHud />
       <SpotCard />
       <KeyHints />
       <TouchControls />

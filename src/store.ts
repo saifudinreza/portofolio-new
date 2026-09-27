@@ -30,26 +30,43 @@ function saveAudioPrefs(prefs: { muted: boolean; volume: number }) {
 }
 
 /**
- * Graphics quality. "high" adds post-processing (AO, bloom, SMAA, grading), headlight spotlights, a bigger
- * shadow map and extra particles; "low" keeps the plain renderer. Touch devices start on low.
+ * Graphics. `quality` is what the player picked; `tier` is what the scene actually renders at. With "auto" the
+ * tier starts from a device guess and a performance monitor moves it up or down.
+ *   low:    DPR ≤ 1, no shadows, no reflections or post-processing, 45% grass
+ *   medium: DPR ≤ 1.25, shadows, reflections, no post-processing, 75% grass
+ *   high:   DPR ≤ 1.75, shadows, reflections, post-processing (bloom, grade, SMAA, adaptive AO), full grass
  */
-export type Quality = 'high' | 'low';
+export type Tier = 'low' | 'medium' | 'high';
+export type Quality = 'auto' | Tier;
 const QUALITY_KEY = 'zare-world-quality';
+const TIERS: Tier[] = ['low', 'medium', 'high'];
+
+const isTouch = () => typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches;
+const autoStartTier = (): Tier => (isTouch() ? 'low' : 'medium');
 
 function loadQuality(): Quality {
   try {
     const saved = localStorage.getItem(QUALITY_KEY);
-    if (saved === 'high' || saved === 'low') return saved;
+    if (saved === 'auto' || saved === 'low' || saved === 'medium' || saved === 'high') return saved;
   } catch {
-    // fall through to the device default
+    // fall through to the default
   }
-  return typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches ? 'low' : 'high';
+  return 'auto';
 }
+
+const initialQuality = loadQuality();
 
 type State = {
   started: boolean;
   quality: Quality;
+  tier: Tier;
   setQuality: (q: Quality) => void;
+  /** Auto mode only: move the tier one step (+1 up, -1 down). */
+  stepTier: (dir: 1 | -1) => void;
+  /** 0..100 while the 3D world loads; set from inside the lazily loaded scene. */
+  loadProgress: number;
+  loadDone: boolean;
+  setLoad: (progress: number, done: boolean) => void;
   muted: boolean;
   volume: number;
   classicOpen: boolean;
@@ -68,15 +85,24 @@ type State = {
 
 export const useStore = create<State>((set, get) => ({
   started: false,
-  quality: loadQuality(),
+  quality: initialQuality,
+  tier: initialQuality === 'auto' ? autoStartTier() : initialQuality,
   setQuality: (quality) => {
-    set({ quality });
+    set({ quality, tier: quality === 'auto' ? autoStartTier() : quality });
     try {
       localStorage.setItem(QUALITY_KEY, quality);
     } catch {
       // not remembered, that's fine
     }
   },
+  stepTier: (dir) => {
+    if (get().quality !== 'auto') return;
+    const i = TIERS.indexOf(get().tier) + dir;
+    if (i >= 0 && i < TIERS.length) set({ tier: TIERS[i] });
+  },
+  loadProgress: 0,
+  loadDone: false,
+  setLoad: (loadProgress, loadDone) => set({ loadProgress, loadDone }),
   ...loadAudioPrefs(),
   classicOpen: false,
   spot: null,
@@ -108,11 +134,13 @@ export const useStore = create<State>((set, get) => ({
  * Driving input. Kept outside React state on purpose: it is read every frame
  * by the car and written by keyboard + touch handlers, so it must not re-render.
  */
-export type TouchButton = 'left' | 'right' | 'gas' | 'reverse' | 'horn';
+export type TouchButton = 'left' | 'right' | 'gas' | 'reverse' | 'horn' | 'boost';
 
 export const input = {
   // Each pedal keeps its own state so releasing one never cancels another that is still held.
-  touch: { left: false, right: false, gas: false, reverse: false, horn: false } as Record<TouchButton, boolean>,
+  touch: { left: false, right: false, gas: false, reverse: false, horn: false, boost: false } as Record<TouchButton, boolean>,
+  /** Virtual joystick, −1..1 each way: x right, y forward. Zero when released. */
+  joy: { x: 0, y: 0 },
   keys: new Set<string>(),
   resetRequested: false,
 };
@@ -121,13 +149,15 @@ export const input = {
 export function resetInput() {
   input.keys.clear();
   for (const b of Object.keys(input.touch) as TouchButton[]) input.touch[b] = false;
+  input.joy.x = input.joy.y = 0;
 }
 
 export function readDriveInput() {
   const k = input.keys;
   const t = input.touch;
-  let throttle = Number(t.gas) - Number(t.reverse);
-  let steer = Number(t.left) - Number(t.right);
+  let throttle = Number(t.gas) - Number(t.reverse) + input.joy.y;
+  // steer is +1 for left, so pushing the stick right steers negative
+  let steer = Number(t.left) - Number(t.right) - input.joy.x;
   if (k.has('KeyW') || k.has('ArrowUp')) throttle += 1;
   if (k.has('KeyS') || k.has('ArrowDown')) throttle -= 1;
   if (k.has('KeyA') || k.has('ArrowLeft')) steer += 1;
@@ -136,7 +166,7 @@ export function readDriveInput() {
     throttle: Math.max(-1, Math.min(1, throttle)),
     steer: Math.max(-1, Math.min(1, steer)),
     brake: k.has('Space'),
-    boost: k.has('ShiftLeft') || k.has('ShiftRight'),
+    boost: k.has('ShiftLeft') || k.has('ShiftRight') || t.boost,
     // held, not tapped: the horn sounds for as long as H (or the touch button) is down
     horn: k.has('KeyH') || t.horn,
   };

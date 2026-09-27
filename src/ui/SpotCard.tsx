@@ -1,5 +1,8 @@
-import { useStore } from '../store';
+import { useEffect, useState } from 'react';
+import { useStore, type Spot } from '../store';
 import { certifications, education, experience, profile, projects, skillGroups } from '../data/profile';
+import { ProjectCover, ProjectLinks } from './ProjectBits';
+import { reducedMotion } from './device';
 
 const contactCopy = {
   github: { title: 'GitHub', body: 'Source code for KasirAI, KostKu, TrustPay and more.', cta: 'Open github.com/saifudinreza' },
@@ -7,14 +10,43 @@ const contactCopy = {
   email: { title: 'Email', body: profile.email, cta: 'Send me an email' },
 };
 
+const EXIT_MS = 220;
+
+/**
+ * The card for whatever the car is parked on. It slides in, and when the car drives off it stays for a
+ * moment to slide out instead of blinking away.
+ */
 export function SpotCard() {
   const spot = useStore((s) => s.spot);
-  if (!spot) return null;
+  const [prevSpot, setPrevSpot] = useState<Spot | null>(spot);
+  const [shown, setShown] = useState<Spot | null>(spot);
+  const [leaving, setLeaving] = useState(false);
 
+  // React to the spot changing while rendering (no extra effect pass): show the new one, or start leaving.
+  if (spot !== prevSpot) {
+    setPrevSpot(spot);
+    if (spot) {
+      setShown(spot);
+      setLeaving(false);
+    } else {
+      setLeaving(true);
+    }
+  }
+
+  useEffect(() => {
+    if (!leaving) return;
+    const id = window.setTimeout(() => {
+      setShown(null);
+      setLeaving(false);
+    }, reducedMotion() ? 0 : EXIT_MS);
+    return () => window.clearTimeout(id);
+  }, [leaving]);
+
+  if (!shown) return null;
   return (
-    <aside className="card" key={JSON.stringify(spot)} aria-live="polite">
-      {spot.kind === 'project' && <ProjectCard id={spot.id} />}
-      {spot.kind === 'skills' && (
+    <aside className={`card${leaving ? ' leaving' : ''}`} key={JSON.stringify(shown)} aria-live="polite">
+      {shown.kind === 'project' && <ProjectCard id={shown.id} />}
+      {shown.kind === 'skills' && (
         <>
           <p className="eyebrow">The warehouse</p>
           <h2>Skills</h2>
@@ -26,7 +58,7 @@ export function SpotCard() {
           ))}
         </>
       )}
-      {spot.kind === 'about' && (
+      {shown.kind === 'about' && (
         <>
           <p className="eyebrow">About me</p>
           <h2>{profile.name}</h2>
@@ -39,13 +71,13 @@ export function SpotCard() {
           <ul className="list">{experience.map((e) => <li key={e.title}><b>{e.title}</b><span>{e.place} · {e.period}</span></li>)}</ul>
         </>
       )}
-      {spot.kind === 'contact' && (
+      {shown.kind === 'contact' && (
         <>
           <p className="eyebrow">Say hello</p>
-          <h2>{contactCopy[spot.id].title}</h2>
-          <p>{contactCopy[spot.id].body}</p>
+          <h2>{contactCopy[shown.id].title}</h2>
+          <p>{contactCopy[shown.id].body}</p>
           <div className="actions">
-            <a className="btn primary" href={profile.links[spot.id]} target="_blank" rel="noreferrer">{contactCopy[spot.id].cta}</a>
+            <a className="btn primary big" href={profile.links[shown.id]} target="_blank" rel="noreferrer">{contactCopy[shown.id].cta}</a>
           </div>
           <p className="hint">Press <kbd>Enter</kbd> to open</p>
         </>
@@ -59,23 +91,20 @@ function ProjectCard({ id }: { id: string }) {
   if (!p) return null;
   return (
     <>
-      <p className="eyebrow" style={{ color: p.color }}>{p.badge ?? 'Project'} · {p.year}</p>
+      <ProjectCover project={p} />
+      <p className="eyebrow">{p.badge ?? 'Project'} · {p.year}</p>
       <h2>{p.name}</h2>
       <p className="lead">{p.tagline}</p>
-      <ul className="bullets">{p.highlights.map((h) => <li key={h}>{h}</li>)}</ul>
-      <ul className="chips">{p.stack.map((s) => <li key={s}>{s}</li>)}</ul>
       {p.links.length > 0 ? (
         <>
-          <div className="actions">
-            {p.links.map((l, i) => (
-              <a key={l.href} className={`btn ${i === 0 ? 'primary' : ''}`} href={l.href} target="_blank" rel="noreferrer">{l.label}</a>
-            ))}
-          </div>
-          <p className="hint">Press <kbd>Enter</kbd> to open</p>
+          <ProjectLinks project={p} />
+          <p className="hint">Press <kbd>Enter</kbd> to open the first link</p>
         </>
       ) : (
         <p className="hint">Case study available on request.</p>
       )}
+      <ul className="bullets">{p.highlights.map((h) => <li key={h}>{h}</li>)}</ul>
+      <ul className="chips">{p.stack.map((s) => <li key={s}>{s}</li>)}</ul>
     </>
   );
 }

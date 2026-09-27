@@ -1,5 +1,6 @@
-import { Suspense, lazy } from 'react';
+import { Suspense, lazy, useState } from 'react';
 import { Physics } from '@react-three/rapier';
+import { PerformanceMonitor } from '@react-three/drei';
 import { useStore } from '../store';
 import { Car } from './Car';
 import { CarFx } from './CarFx';
@@ -18,14 +19,39 @@ import { letterColors, palette } from './layout';
 // Post-processing only runs on high quality, so its library loads in its own chunk and only when needed.
 const PostFx = lazy(() => import('./PostFx').then((m) => ({ default: m.PostFx })));
 
+/**
+ * Auto quality: drei's PerformanceMonitor averages the frame rate and steps the tier down when it sits
+ * under 48 FPS, up when it holds above 58. After a few back-and-forths it settles on the lower tier.
+ */
+function AutoQuality() {
+  const auto = useStore((s) => s.quality === 'auto');
+  const started = useStore((s) => s.started);
+  const stepTier = useStore((s) => s.stepTier);
+  const [settled, setSettled] = useState(false);
+  if (!auto || !started || settled) return null;
+  return (
+    <PerformanceMonitor
+      bounds={() => [48, 58]}
+      flipflops={4}
+      onDecline={() => stepTier(-1)}
+      onIncline={() => stepTier(1)}
+      onFallback={() => {
+        setSettled(true);
+        stepTier(-1);
+      }}
+    />
+  );
+}
+
 export function Experience({ debug = false }: { debug?: boolean }) {
-  const high = useStore((s) => s.quality === 'high');
+  const tier = useStore((s) => s.tier);
   return (
     <>
       <color attach="background" args={[palette.sky]} />
       <fog attach="fog" args={[palette.sky, 50, 115]} />
-      {/* image-based reflections cost a lookup on every lit pixel (grass included), so high quality only */}
-      {high && <EnvLighting />}
+      <AutoQuality />
+      {/* image-based reflections cost a lookup on every lit pixel (grass included), so not on low */}
+      {tier !== 'low' && <EnvLighting />}
       <Sky />
       <Clouds />
       <Sea />
@@ -52,7 +78,7 @@ export function Experience({ debug = false }: { debug?: boolean }) {
           <CarFx />
         </Physics>
       </Suspense>
-      {high && (
+      {tier === 'high' && (
         <Suspense fallback={null}>
           <PostFx />
         </Suspense>

@@ -7,13 +7,39 @@
     <meta name="theme-color" content="#F6D9A8" />
     <title>Saifudin Reza · Full Stack Developer</title>
     <meta name="description" content="Interactive 3D portfolio of Saifudin Reza, full stack web developer (Next.js, Laravel). Drive a little car through projects like KasirAI, KostKu and TrustPay." />
-    <meta property="og:title" content="Saifudin Reza · Full Stack Developer" />
-    <meta property="og:description" content="Drive through my projects: KasirAI, KostKu, TrustPay and more." />
+    <meta name="author" content="Saifudin Reza" />
+
+    <!-- Open Graph / social previews. Set VITE_SITE_URL (e.g. https://your-site.vercel.app) so image URLs are absolute. -->
     <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Zare World" />
+    <meta property="og:title" content="Saifudin Reza · Full Stack Developer" />
+    <meta property="og:description" content="Drive a little car around a 3D island to explore my projects: KasirAI, KostKu, TrustPay and more." />
+    <meta property="og:url" content="%VITE_SITE_URL%/" />
+    <meta property="og:image" content="%VITE_SITE_URL%/og.jpg" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="A small navy car on a sandy low-poly island next to big REZA letters" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Saifudin Reza · Full Stack Developer" />
+    <meta name="twitter:description" content="Drive a little car around a 3D island to explore my projects." />
+    <meta name="twitter:image" content="%VITE_SITE_URL%/og.jpg" />
+
     <link rel="preload" href="/fonts/ArchivoBlack-Regular.ttf" as="font" type="font/ttf" crossorigin />
   </head>
   <body>
-    <div id="root"></div>
+    <!-- Static copy of the loader so the first paint doesn't wait for JavaScript; React replaces it on mount. -->
+    <div id="root">
+      <div class="loader">
+        <div class="loader-box">
+          <p class="eyebrow">Portfolio · 2026</p>
+          <h1>Saifudin Reza</h1>
+          <p class="lead">Junior Software Engineer · Full Stack Web Developer</p>
+          <p class="muted">Take the car for a spin around my little world: projects, skills, and how to reach me.</p>
+          <div class="bar indeterminate"><span></span></div>
+          <p class="tip"><b>Tip</b> W A S D or the arrow keys to drive, Shift to boost</p>
+        </div>
+      </div>
+    </div>
     <noscript>
       <p>Saifudin Reza, Full Stack Web Developer. GitHub: https://github.com/saifudinreza · Email: donojomi@gmail.com</p>
     </noscript>

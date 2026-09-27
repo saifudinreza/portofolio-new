@@ -7,6 +7,7 @@ import { Ground, HomeText, Lights, Paths, Playground } from './Environment';
 import { Trees } from './Trees';
 import { Grass } from './Grass';
 import { Pond } from './Pond';
+import { Npcs } from './Npc';
 import { letterColors, palette } from './layout';
 
 export function Experience({ debug = false }: { debug?: boolean }) {
@@ -25,6 +26,7 @@ export function Experience({ debug = false }: { debug?: boolean }) {
           <Trees />
           <Grass />
           <Pond />
+          <Npcs />
           <ProjectsArea />
           <Warehouse />
           <AboutArea />

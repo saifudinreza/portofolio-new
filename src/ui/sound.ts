@@ -79,3 +79,32 @@ export function splash(strength = 1) {
     // Audio is a nice-to-have; ignore browsers that block it.
   }
 }
+
+/** Cartoon "boing" for bumping into a pedestrian; kept silly, never painful. */
+export function boing() {
+  try {
+    ctx ??= new AudioContext();
+    const now = ctx.currentTime;
+    const osc = ctx.createOscillator();
+    const wobble = ctx.createOscillator();
+    const wobbleGain = ctx.createGain();
+    const gain = ctx.createGain();
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(180, now);
+    osc.frequency.exponentialRampToValueAtTime(620, now + 0.12);
+    osc.frequency.exponentialRampToValueAtTime(300, now + 0.45);
+    wobble.frequency.value = 22;
+    wobbleGain.gain.value = 40;
+    wobble.connect(wobbleGain).connect(osc.frequency);
+    gain.gain.setValueAtTime(0.0001, now);
+    gain.gain.exponentialRampToValueAtTime(0.18, now + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.5);
+    osc.connect(gain).connect(ctx.destination);
+    osc.start(now);
+    wobble.start(now);
+    osc.stop(now + 0.52);
+    wobble.stop(now + 0.52);
+  } catch {
+    // Audio is a nice-to-have; ignore browsers that block it.
+  }
+}

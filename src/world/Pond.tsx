@@ -362,7 +362,7 @@ export function Pond() {
       const inside = a.radius > 0 && d < 1;
       if (inside) {
         if (!t.inside && speed > 1.5) {
-          splash(Math.min(speed / 12, 1));
+          splash(Math.min(speed / 12, 1), { x: a.x, y: pond.water, z: a.z });
           spray(a.x, a.z, vx, vz, 10 + Math.floor(speed * 2));
           addRipple(a.x, a.z, 1, now);
           t.lastRipple = now;

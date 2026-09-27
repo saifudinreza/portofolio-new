@@ -133,7 +133,7 @@ function Person({ route, seed }: { route: NpcRoute; seed: number }) {
     rb.setBodyType(rapier.RigidBodyType.Dynamic, true);
     rb.setLinvel({ x: vx * 0.7 + (awayX / al) * 2, y: 3.5 + speed * 0.25, z: vz * 0.7 + (awayZ / al) * 2 }, true);
     rb.setAngvel({ x: (Math.random() - 0.5) * 8, y: (Math.random() - 0.5) * 6, z: (Math.random() - 0.5) * 8 }, true);
-    boing();
+    boing({ x: s.x, y: 0.8, z: s.z });
   };
 
   useFrame(({ clock }, rawDt) => {

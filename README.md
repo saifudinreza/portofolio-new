@@ -41,7 +41,9 @@ Graphics quality is **Auto** by default and can be fixed to Low, Medium or High 
 - **Lighthouse** (production build, Lighthouse 12, landing page): desktop 99 performance / 100 accessibility / 100 best practices / 100 SEO; mobile 87 to 89 performance on repeat runs (one cold first run scored 55) with 100 on the rest. Lighthouse runs headless without a GPU, so these scores describe the landing page before the 3D world loads; the frame rates below describe the world itself.
 - **Frame rate** (production build, driving at home, 1422×647 at 1.35 DPR, integrated AMD Radeon, Playwright Chromium): Low about 28 to 35 FPS, Medium about 22, High about 18 to 20. The previous release measured about 23 FPS in its Lite mode in the same session, so Low is roughly 30% faster than before. That machine and browser are slower than the earlier measurements, so the ≥ 55 FPS target for mid-range laptops is not confirmed yet; Auto falls back to Low on such hardware.
 - The car is built from rounded primitives: clearcoat paint, see-through glass with seats inside, chrome grille and five-spoke rims, bulging tyres with tread, `REZA` plates, working brake lights, a headlight pool on the ground, visual suspension and a flapping antenna flag. Driving kicks up dust, braking and sliding leave skid marks, the exhaust smokes and boost lights a flame.
-- The island has a sky dome with drifting clouds, a sea with foam around rocky cliffs, a sandy ground with a normal map, roads with ragged edges and wheel ruts, bushes, flowers, fences, street lamps, benches, butterflies and leaves on the wind.
+- The island has a sky dome with drifting clouds, a sea with foam around rocky cliffs, a sandy ground with a normal map, roads with ragged edges and wheel ruts, flowers, fences, street lamps, benches, butterflies and leaves on the wind.
+- **Trees and shrubs** in five kinds (green oak, autumn, sakura, pine, big shrub). Each canopy is a few hundred alpha-tested leaf cards whose normals point out from the canopy's volumes, around a solid dark core, so it shades as one soft mass and never shows the ground through gaps. Branched trunks with bark, wind sway, a shove when you brush past, and leaves that drift down near the car. The core casts the shadow; Low draws 60% of the cards.
+- **Grass**: 80k tapered blades (26k on phones) from dark roots to bright tips, tinted per clump between fresh green, deep green and a little dry straw, taller in open meadow and bunched up along the road edges. Low draws 45% of them, a little shorter.
 - Motion respects `prefers-reduced-motion`: no camera shake, a still intro view and instant UI transitions.
 
 ## Tech stack and why
@@ -95,7 +97,9 @@ src/
     CarFx.tsx            wheel dust, skid marks, exhaust smoke, boost flame
     Atmosphere.tsx       sky, clouds, sea, cliffs, environment lighting
     PostFx.tsx           post-processing for High quality
-    Details.tsx          bushes, flowers, lamps, fences, benches, butterflies, leaves
+    Trees.tsx            leaf-card trees and shrubs, wind sway, falling leaves
+    Grass.tsx            instanced grass that bends in the wind and under wheels and feet
+    Details.tsx          shrubs, flowers, lamps, fences, benches, butterflies, leaves
     textures.ts          procedural canvas textures (sand, roads, wood, tyre tread)
     Letters.tsx          knockable 3D letters
     Zones.tsx            projects, warehouse, about and contact areas

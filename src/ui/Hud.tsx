@@ -54,8 +54,53 @@ export function TopBar() {
           <button key={z} onClick={(e) => { e.currentTarget.blur(); teleportTo(z); }}>{zones[z].label}</button>
         ))}
       </nav>
+      <SoundControl />
       <button className="btn small" onClick={() => setClassic(true)}>Classic view</button>
     </header>
+  );
+}
+
+/** Mute button plus a volume slider (slider hidden on small screens). Both are remembered in localStorage. */
+function SoundControl() {
+  const muted = useStore((s) => s.muted);
+  const volume = useStore((s) => s.volume);
+  const setMuted = useStore((s) => s.setMuted);
+  const setVolume = useStore((s) => s.setVolume);
+  const silent = muted || volume === 0;
+  return (
+    <div className="sound">
+      <button
+        className="sound-toggle"
+        aria-label={silent ? 'Unmute sound' : 'Mute sound'}
+        aria-pressed={silent}
+        title={silent ? 'Unmute (M)' : 'Mute (M)'}
+        onClick={(e) => {
+          e.currentTarget.blur();
+          if (volume === 0) setVolume(0.7);
+          else setMuted(!muted);
+        }}
+      >
+        <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden>
+          <path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor" />
+          {silent ? (
+            <path d="M16 9l5 6M21 9l-5 6" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" fill="none" />
+          ) : (
+            <path d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" fill="none" />
+          )}
+        </svg>
+      </button>
+      <input
+        type="range"
+        min={0}
+        max={1}
+        step={0.05}
+        value={muted ? 0 : volume}
+        aria-label="Volume"
+        onChange={(e) => setVolume(Number(e.currentTarget.value))}
+        // don't keep focus, or arrow keys meant for driving would move the slider
+        onPointerUp={(e) => e.currentTarget.blur()}
+      />
+    </div>
   );
 }
 
@@ -65,7 +110,8 @@ export function KeyHints() {
       <span><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> drive</span>
       <span><kbd>Shift</kbd> boost</span>
       <span><kbd>Space</kbd> brake</span>
-      <span><kbd>H</kbd> horn</span>
+      <span><kbd>H</kbd> hold horn</span>
+      <span><kbd>M</kbd> mute</span>
       <span><kbd>R</kbd> reset</span>
       <span>scroll to zoom</span>
     </div>
@@ -98,6 +144,12 @@ export function TouchControls() {
         <button aria-label="Steer left" {...hold('left')}>◀</button>
         <button aria-label="Steer right" {...hold('right')}>▶</button>
       </div>
+      <button aria-label="Horn" className="horn" {...hold('horn')}>
+        <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden>
+          <path d="M3 10v4h3l7 4V6l-7 4z" fill="currentColor" />
+          <path d="M16 9a4 4 0 0 1 0 6M19 7a7 7 0 0 1 0 10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" fill="none" />
+        </svg>
+      </button>
       <div className="pad-group">
         <button aria-label="Reverse" {...hold('reverse')}>▼</button>
         <button aria-label="Accelerate" className="gas" {...hold('gas')}>▲</button>

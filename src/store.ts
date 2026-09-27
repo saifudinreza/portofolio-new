@@ -8,8 +8,31 @@ export type Spot =
   | { kind: 'about' }
   | { kind: 'contact'; id: 'github' | 'linkedin' | 'email' };
 
+const AUDIO_KEY = 'zare-world-audio';
+
+/** Mute + volume survive reloads; storage can be missing or blocked, so fall back quietly. */
+function loadAudioPrefs() {
+  try {
+    const saved = JSON.parse(localStorage.getItem(AUDIO_KEY) ?? '{}') as { muted?: unknown; volume?: unknown };
+    const volume = typeof saved.volume === 'number' ? Math.min(1, Math.max(0, saved.volume)) : 0.7;
+    return { muted: saved.muted === true, volume };
+  } catch {
+    return { muted: false, volume: 0.7 };
+  }
+}
+
+function saveAudioPrefs(prefs: { muted: boolean; volume: number }) {
+  try {
+    localStorage.setItem(AUDIO_KEY, JSON.stringify(prefs));
+  } catch {
+    // private mode or blocked storage: the setting just won't be remembered
+  }
+}
+
 type State = {
   started: boolean;
+  muted: boolean;
+  volume: number;
   classicOpen: boolean;
   spot: Spot | null;
   teleport: { zone: ZoneId; nonce: number } | null;
@@ -20,10 +43,13 @@ type State = {
   clearSpotIf: (match: (s: Spot) => boolean) => void;
   teleportTo: (zone: ZoneId) => void;
   setSpeed: (v: number) => void;
+  setMuted: (muted: boolean) => void;
+  setVolume: (volume: number) => void;
 };
 
-export const useStore = create<State>((set) => ({
+export const useStore = create<State>((set, get) => ({
   started: false,
+  ...loadAudioPrefs(),
   classicOpen: false,
   spot: null,
   teleport: null,
@@ -38,20 +64,29 @@ export const useStore = create<State>((set) => ({
   clearSpotIf: (match) => set((s) => (s.spot && match(s.spot) ? { spot: null } : {})),
   teleportTo: (zone) => set({ teleport: { zone, nonce: Date.now() }, spot: null }),
   setSpeed: (v) => set({ speed: v }),
+  setMuted: (muted) => {
+    set({ muted });
+    saveAudioPrefs({ muted, volume: get().volume });
+  },
+  setVolume: (volume) => {
+    // dragging the slider up from zero also unmutes, like most players
+    const muted = volume > 0 ? false : get().muted;
+    set({ volume, muted });
+    saveAudioPrefs({ muted, volume });
+  },
 }));
 
 /**
  * Driving input. Kept outside React state on purpose: it is read every frame
  * by the car and written by keyboard + touch handlers, so it must not re-render.
  */
-export type TouchButton = 'left' | 'right' | 'gas' | 'reverse';
+export type TouchButton = 'left' | 'right' | 'gas' | 'reverse' | 'horn';
 
 export const input = {
   // Each pedal keeps its own state so releasing one never cancels another that is still held.
-  touch: { left: false, right: false, gas: false, reverse: false } as Record<TouchButton, boolean>,
+  touch: { left: false, right: false, gas: false, reverse: false, horn: false } as Record<TouchButton, boolean>,
   keys: new Set<string>(),
   resetRequested: false,
-  honk: false,
 };
 
 /** Release everything. Called whenever key/pointer up events may never arrive (blur, hidden tab, overlays). */
@@ -74,6 +109,8 @@ export function readDriveInput() {
     steer: Math.max(-1, Math.min(1, steer)),
     brake: k.has('Space'),
     boost: k.has('ShiftLeft') || k.has('ShiftRight'),
+    // held, not tapped: the horn sounds for as long as H (or the touch button) is down
+    horn: k.has('KeyH') || t.horn,
   };
 }
 

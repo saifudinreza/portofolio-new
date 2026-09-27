@@ -38,7 +38,7 @@ export default function App() {
       // in a Cmd combo never fires keyup, so adding it would leave the car driving itself.
       if (e.metaKey || e.ctrlKey || e.altKey) return;
       if (e.code === 'KeyR') input.resetRequested = true;
-      if (e.code === 'KeyH') input.honk = true;
+      if (e.code === 'KeyM' && !e.repeat) useStore.getState().setMuted(!useStore.getState().muted);
       if (e.code === 'Enter' && useStore.getState().started) {
         const href = primaryLink(useStore.getState().spot);
         if (href) window.open(href, '_blank', 'noopener');

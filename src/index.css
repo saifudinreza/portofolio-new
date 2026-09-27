@@ -97,6 +97,11 @@ kbd {
 .brand-text small { color: var(--muted); font-size: 0.72rem; }
 .teleports { display: flex; gap: 4px; background: var(--cream); border: var(--border); border-radius: 12px; padding: 4px; box-shadow: var(--shadow); margin-right: auto; }
 .teleports button { font: inherit; font-weight: 700; font-size: 0.82rem; color: var(--navy); background: none; border: 0; border-radius: 8px; padding: 0.45em 0.75em; cursor: pointer; }
+.sound { display: flex; align-items: center; gap: 6px; background: var(--cream); border: var(--border); border-radius: 12px; padding: 4px 10px 4px 4px; box-shadow: var(--shadow); }
+.sound-toggle { display: grid; place-items: center; width: 32px; height: 32px; color: var(--navy); background: none; border: 0; border-radius: 8px; cursor: pointer; }
+.sound-toggle:hover { background: var(--sand); }
+.sound-toggle:focus-visible, .sound input:focus-visible { outline: 3px solid var(--coral); outline-offset: 2px; }
+.sound input { width: 84px; accent-color: var(--coral); cursor: pointer; }
 .teleports button:hover { background: var(--sand); }
 
 /* ---------- spot card ---------- */
@@ -131,6 +136,8 @@ kbd {
 }
 .touch button:active { transform: translate(3px, 3px); box-shadow: 1px 1px 0 var(--navy); }
 .touch .gas { background: var(--teal); color: #fff; }
+/* horn floats above the pedals so the two pad groups keep their width on narrow phones */
+.touch .horn { position: absolute; right: 0; bottom: 78px; width: 56px; height: 56px; border-radius: 50%; display: grid; place-items: center; background: var(--yellow); pointer-events: auto; }
 
 /* ---------- classic view ---------- */
 .classic { position: fixed; inset: 0; overflow: auto; background: var(--sand); z-index: 30; }
@@ -152,6 +159,8 @@ kbd {
   .topbar { flex-wrap: wrap; top: 10px; left: 10px; right: 10px; }
   .teleports { order: 3; width: 100%; justify-content: space-between; overflow-x: auto; }
   .teleports button { padding: 0.45em 0.5em; }
+  .sound { padding-right: 4px; }
+  .sound input { display: none; }
   .card { top: auto; bottom: 100px; right: 10px; left: 10px; width: auto; max-height: 38vh; padding: 0.9rem 1rem; }
   .card h2 { font-size: 1.3rem; }
   .card .bullets, .card .hint { display: none; }

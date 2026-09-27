@@ -198,7 +198,7 @@ export function Trees() {
           t.vx += pvx * kick;
           t.vz += pvz * kick;
           spawnLeaves(t, pvx / speed, pvz / speed, speed);
-          thud(Math.min(speed / 15, 1));
+          thud(Math.min(speed / 15, 1), { x: t.x, y: 1.5 * t.s, z: t.z });
         }
       }
       t.vx += ax * dt;

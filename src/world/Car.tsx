@@ -4,7 +4,7 @@ import { CoefficientCombineRule, RigidBody, RoundCuboidCollider, useRapier, type
 import * as THREE from 'three';
 import { input, readDriveInput, useStore } from '../store';
 import { zones, palette, pondDistance } from './layout';
-import { honk } from '../ui/sound';
+import { updateCarAudio, updateListener } from '../ui/sound';
 import { carState } from './carState';
 import { actors, type Actor } from './actors';
 
@@ -26,6 +26,8 @@ const CAMERA_OFFSET = new THREE.Vector3(4, 14, 14);
 let zoom = 1;
 
 const tmpQuat = new THREE.Quaternion();
+const tmpForward = new THREE.Vector3();
+const tmpUp = new THREE.Vector3();
 
 const yawFromQuat = (q: { y: number; w: number }) => 2 * Math.atan2(q.y, q.w);
 
@@ -112,11 +114,7 @@ export function Car() {
       return;
     }
 
-    const drive = started ? readDriveInput() : { throttle: 0, steer: 0, brake: false, boost: false };
-    if (input.honk) {
-      input.honk = false;
-      honk();
-    }
+    const drive = started ? readDriveInput() : { throttle: 0, steer: 0, brake: false, boost: false, horn: false };
 
     // Parking brake: with no throttle and almost no speed on the ground, pin the car in x/z so it
     // cannot creep down the ramp or keep sliding after a bump. Any throttle or leaving the ground frees it.
@@ -170,6 +168,23 @@ export function Car() {
     camera.position.lerp(desired, k);
     lookAt.current.lerp(target, k);
     camera.lookAt(lookAt.current);
+
+    // Sound: the listener rides on the camera, the engine/horn/tyres sit on the car.
+    camera.getWorldDirection(tmpForward);
+    tmpUp.set(0, 1, 0).applyQuaternion(camera.quaternion);
+    updateListener(camera.position, tmpForward, tmpUp);
+    updateCarAudio({
+      x: pos.x,
+      y: pos.y,
+      z: pos.z,
+      speed: fwdSpeed,
+      throttle: drive.throttle,
+      boost: drive.boost,
+      brake: drive.brake,
+      grounded,
+      horn: drive.horn,
+      dt,
+    });
   });
 
   const wheelPositions: [number, number, number, boolean][] = [

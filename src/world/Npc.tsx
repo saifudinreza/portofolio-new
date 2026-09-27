@@ -407,6 +407,7 @@ function Person({ route, seed }: { route: NpcRoute; seed: number }) {
         linearDamping={0.6}
         angularDamping={1.5}
         canSleep={false}
+        userData={{ material: 'npc' }}
       >
         <CapsuleCollider ref={collider} args={[0.3, 0.25]} position={[0, 0.6, 0]} sensor density={1} friction={0.8} restitution={0.3} />
         <group ref={root}>

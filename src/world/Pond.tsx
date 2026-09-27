@@ -509,7 +509,7 @@ export function Pond() {
   return (
     <group>
       {/* rim rocks block the car; the beach gap on the south side lets it drive in */}
-      <RigidBody type="fixed" colliders={false}>
+      <RigidBody type="fixed" colliders={false} userData={{ material: 'stone' }}>
         {scene.rocks.map((k, i) => (
           <CylinderCollider key={i} args={[0.5, k.s * 0.8]} position={[k.x, 0.5, k.z]} />
         ))}

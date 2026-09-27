@@ -45,7 +45,7 @@ export function Lights() {
 export function Ground() {
   return (
     <>
-      <RigidBody type="fixed" colliders={false} friction={1}>
+      <RigidBody type="fixed" colliders={false} friction={1} userData={{ material: 'ground' }}>
         <CuboidCollider args={[HALF, 1, HALF]} position={[0, -1, 0]} />
         {/* invisible walls around the island */}
         <CuboidCollider args={[HALF, 3, 0.5]} position={[0, 2, -HALF]} />
@@ -95,7 +95,7 @@ export function Playground() {
   const cones = useMemo(() => Array.from({ length: 7 }, (_, i) => [6 + i * 1.6, 14 + (i % 2) * 1.4] as [number, number]), []);
   return (
     <group>
-      <RigidBody type="fixed" colliders="cuboid" position={[-8, 0.55, 10]} rotation={[0.2, 0, 0]} friction={0.4}>
+      <RigidBody type="fixed" colliders="cuboid" position={[-8, 0.55, 10]} rotation={[0.2, 0, 0]} friction={0.4} userData={{ material: 'heavy' }}>
         <mesh castShadow receiveShadow>
           <boxGeometry args={[3.2, 0.3, 5.6]} />
           <meshStandardMaterial color={palette.coral} />
@@ -109,7 +109,7 @@ export function Playground() {
       ))}
       <GroundText position={[-8, 14.4]} size={0.45} color={palette.coral}>JUMP!</GroundText>
       {cones.map(([x, z], i) => (
-        <RigidBody key={i} position={[x, 0.4, z]} colliders="hull" mass={0.08} friction={0.8}>
+        <RigidBody key={i} position={[x, 0.4, z]} colliders="hull" mass={0.08} friction={0.8} userData={{ material: 'plastic' }}>
           <mesh castShadow>
             <coneGeometry args={[0.3, 0.8, 12]} />
             <meshStandardMaterial color={i % 2 ? palette.cream : palette.coral} />

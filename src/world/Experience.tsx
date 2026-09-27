@@ -8,6 +8,7 @@ import { Trees } from './Trees';
 import { Grass } from './Grass';
 import { Pond } from './Pond';
 import { Npcs } from './Npc';
+import { ImpactParticles } from './Impacts';
 import { letterColors, palette } from './layout';
 
 export function Experience({ debug = false }: { debug?: boolean }) {
@@ -27,6 +28,7 @@ export function Experience({ debug = false }: { debug?: boolean }) {
           <Grass />
           <Pond />
           <Npcs />
+          <ImpactParticles />
           <ProjectsArea />
           <Warehouse />
           <AboutArea />

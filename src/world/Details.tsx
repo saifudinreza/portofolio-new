@@ -6,7 +6,7 @@ import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js
 import { WORLD_SIZE, distanceToSegment, isClear, palette, pond, pondDistance, rng, roadSegments, trails } from './layout';
 import { carState } from './carState';
 import { woodMap } from './textures';
-import { setCardShare, shrubParts } from './Trees';
+import { setCardShare, shrubParts } from './foliage';
 import { useStore } from '../store';
 
 const HALF = WORLD_SIZE / 2;

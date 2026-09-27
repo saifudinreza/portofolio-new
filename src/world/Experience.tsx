@@ -6,6 +6,7 @@ import { AboutArea, ContactArea, ProjectsArea, Warehouse } from './Zones';
 import { Ground, HomeText, Lights, Paths, Playground } from './Environment';
 import { Trees } from './Trees';
 import { Grass } from './Grass';
+import { Pond } from './Pond';
 import { letterColors, palette } from './layout';
 
 export function Experience({ debug = false }: { debug?: boolean }) {
@@ -23,6 +24,7 @@ export function Experience({ debug = false }: { debug?: boolean }) {
           <Playground />
           <Trees />
           <Grass />
+          <Pond />
           <ProjectsArea />
           <Warehouse />
           <AboutArea />

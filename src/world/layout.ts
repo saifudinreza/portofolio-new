@@ -22,6 +22,13 @@ export const projectPadPositions: [number, number][] = [
 export const warehouse = { x: -24, z: -20 };
 export const aboutArea = { x: -22, z: 26 };
 export const contactPads: [number, number][] = [[18, 30], [26, 30], [34, 30]];
+/** Koi pond between the About and Contact roads; an ellipse with radii rx (x) and rz (z). */
+export const pond = { x: -1.5, z: 27, rx: 5.5, rz: 3.8, water: 0.22 };
+
+/** 0 at the pond centre, 1 on the water's edge, >1 outside. */
+export function pondDistance(x: number, z: number) {
+  return Math.hypot((x - pond.x) / pond.rx, (z - pond.z) / pond.rz);
+}
 
 export const palette = {
   ground: '#F0E0C0',
@@ -74,6 +81,7 @@ const keepClear: [number, number, number][] = [
 /** True when (x, z) is open ground: away from areas, pads, spawns and at least `roadMargin` from road centrelines. */
 export function isClear(x: number, z: number, roadMargin = 4) {
   if (keepClear.some(([cx, cz, r]) => Math.hypot(x - cx, z - cz) < r)) return false;
+  if (pondDistance(x, z) < 1.3) return false;
   for (const p of [...projectPadPositions, ...contactPads]) if (Math.hypot(x - p[0], z - p[1]) < 5) return false;
   if (Object.values(zones).some((zn) => Math.hypot(x - zn.spawn[0], z - zn.spawn[1]) < 5)) return false;
   return roadSegments.every((seg) => distanceToSegment(x, z, seg) > roadMargin);

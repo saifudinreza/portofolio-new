@@ -6,6 +6,7 @@ import { input, readDriveInput, useStore } from '../store';
 import { zones, palette } from './layout';
 import { honk } from '../ui/sound';
 import { carState } from './carState';
+import { actors, type Actor } from './actors';
 
 // Arcade driving tuning. Units: metres, seconds.
 const MAX_SPEED = 13;
@@ -17,6 +18,7 @@ const GRIP = 10;
 const RIDE_HEIGHT = 0.4; // distance from body centre to the bottom of the wheels
 const ROLLING_RESISTANCE = 2; // constant deceleration when coasting, m/s²
 const PARK_SPEED = 0.3; // below this with no throttle the parking brake holds the car
+const CAR_GRASS_RADIUS = 1.8;
 
 const CAMERA_OFFSET = new THREE.Vector3(4, 14, 14);
 let zoom = 1;
@@ -33,6 +35,7 @@ export function Car() {
   const lookAt = useRef(new THREE.Vector3());
   const tilt = useRef({ pitch: 0, roll: 0 });
   const parked = useRef(false);
+  const actor = useRef<Actor>({ x: 0, z: 0, radius: 0 });
   const { rapier, world } = useRapier();
   const camera = useThree((s) => s.camera);
   const viewport = useThree((s) => s.size);
@@ -56,6 +59,12 @@ export function Car() {
     const z = zones[teleport.zone];
     place(z.spawn[0], z.spawn[1], z.yaw);
   }, [teleport]);
+
+  useEffect(() => {
+    const a = actor.current;
+    actors.add(a);
+    return () => void actors.delete(a);
+  }, []);
 
   // Scroll to zoom the camera in and out.
   useEffect(() => {
@@ -91,6 +100,9 @@ export function Car() {
     carState.speed = fwdSpeed;
     carState.mass = mass;
     carState.y = pos.y;
+    actor.current.x = pos.x;
+    actor.current.z = pos.z;
+    actor.current.radius = grounded ? CAR_GRASS_RADIUS : 0;
 
     if (pos.y < -10 || input.resetRequested) {
       input.resetRequested = false;

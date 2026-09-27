@@ -4,6 +4,7 @@ import { Car } from './Car';
 import { Letters } from './Letters';
 import { AboutArea, ContactArea, ProjectsArea, Warehouse } from './Zones';
 import { Ground, HomeText, Lights, Paths, Playground, Trees } from './Environment';
+import { Grass } from './Grass';
 import { letterColors, palette } from './layout';
 
 export function Experience({ debug = false }: { debug?: boolean }) {
@@ -20,6 +21,7 @@ export function Experience({ debug = false }: { debug?: boolean }) {
           <Letters text="REZA" size={2.6} depth={0.9} position={[0, 0, -3]} colors={letterColors} gap={0.25} />
           <Playground />
           <Trees />
+          <Grass />
           <ProjectsArea />
           <Warehouse />
           <AboutArea />

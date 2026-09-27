@@ -2,7 +2,7 @@ import { useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { CuboidCollider, CylinderCollider, RigidBody } from '@react-three/rapier';
 import * as THREE from 'three';
-import { WORLD_SIZE, aboutArea, contactPads, distanceToSegment, palette, projectPadPositions, roadSegments, warehouse, zones } from './layout';
+import { WORLD_SIZE, isClear, palette, rng, roadSegments } from './layout';
 import { carState } from './carState';
 import { BODY_FONT, GroundText } from './common';
 
@@ -88,32 +88,6 @@ export function Paths() {
       <GroundText position={[6.5, 12]} size={0.5} color={palette.woodDark} rotation={-0.45}>CONTACT</GroundText>
     </group>
   );
-}
-
-// Deterministic pseudo random so the world looks the same on every load.
-function rng(seed: number) {
-  return () => {
-    seed = (seed * 16807) % 2147483647;
-    return (seed - 1) / 2147483646;
-  };
-}
-
-const keepClear: [number, number, number][] = [
-  [0, 0, 11], // home
-  [26, -20, 17], // projects
-  [warehouse.x, warehouse.z, 10],
-  [aboutArea.x, aboutArea.z, 9],
-  [26, 29, 13], // contact
-  [-8, 10, 5], // ramp
-  [9, 16, 5], // cones
-];
-
-function isClear(x: number, z: number) {
-  if (keepClear.some(([cx, cz, r]) => Math.hypot(x - cx, z - cz) < r)) return false;
-  for (const p of [...projectPadPositions, ...contactPads]) if (Math.hypot(x - p[0], z - p[1]) < 5) return false;
-  if (Object.values(zones).some((zn) => Math.hypot(x - zn.spawn[0], z - zn.spawn[1]) < 5)) return false;
-  // stay well clear of the roads
-  return roadSegments.every((seg) => distanceToSegment(x, z, seg) > 4);
 }
 
 export function Trees() {

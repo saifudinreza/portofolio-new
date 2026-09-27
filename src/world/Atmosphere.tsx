@@ -4,6 +4,7 @@ import { Environment, Lightformer } from '@react-three/drei';
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { WORLD_SIZE, palette, rng } from './layout';
+import { mossyStoneMaterial, rockGeometry } from './stone';
 
 const HALF = WORLD_SIZE / 2;
 export const SEA_LEVEL = -1.4;
@@ -183,7 +184,7 @@ export function Cliffs() {
         rocks.push({ x, z, y: -1.6 + r() * 1.1, s, yaw: r() * Math.PI * 2, tilt: (r() - 0.5) * 0.5 });
       }
     }
-    const inst = new THREE.InstancedMesh(new THREE.DodecahedronGeometry(1, 0), new THREE.MeshStandardMaterial({ flatShading: true, roughness: 0.95 }), rocks.length);
+    const inst = new THREE.InstancedMesh(rockGeometry(11, 1), mossyStoneMaterial(0.3), rocks.length);
     const m = new THREE.Matrix4();
     const q = new THREE.Quaternion();
     const e = new THREE.Euler();

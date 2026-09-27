@@ -1,4 +1,4 @@
-import { Text } from '@react-three/drei';
+import { RoundedBox, Text } from '@react-three/drei';
 import { RigidBody, CuboidCollider } from '@react-three/rapier';
 import { useStore, type Spot } from '../store';
 import { crateSkills, projects } from '../data/profile';
@@ -180,11 +180,22 @@ export function ContactArea() {
     <group>
       <GroundText position={[26, 35.6]} size={1.3}>SAY HELLO</GroundText>
       <GroundText position={[26, 36.9]} size={0.4} color={palette.woodDark} font={BODY_FONT}>Open to junior software engineer roles</GroundText>
-      {/* mailbox */}
+      {/* mailbox: rounded-top box on a post, with its flag up */}
       <group position={[38.5, 0, 26]}>
-        <mesh position={[0, 0.6, 0]} castShadow><boxGeometry args={[0.12, 1.2, 0.12]} /><meshStandardMaterial color={palette.woodDark} /></mesh>
-        <mesh position={[0, 1.35, 0]} castShadow><boxGeometry args={[0.6, 0.5, 0.9]} /><meshStandardMaterial color={palette.coral} /></mesh>
-        <mesh position={[0.34, 1.55, 0.2]}><boxGeometry args={[0.05, 0.4, 0.12]} /><meshStandardMaterial color={palette.yellow} /></mesh>
+        <RigidBody type="fixed" colliders={false} userData={{ material: 'metal' }}>
+          <CuboidCollider args={[0.32, 0.8, 0.46]} position={[0, 0.8, 0]} />
+        </RigidBody>
+        <RoundedBox args={[0.14, 1.2, 0.14]} radius={0.03} smoothness={2} position={[0, 0.6, 0]} castShadow><meshStandardMaterial color={palette.woodDark} map={woodMap()} /></RoundedBox>
+        <RoundedBox args={[0.62, 0.34, 0.92]} radius={0.05} smoothness={2} position={[0, 1.3, 0]} castShadow><meshStandardMaterial color={palette.coral} roughness={0.45} metalness={0.2} /></RoundedBox>
+        <mesh position={[0, 1.47, 0]} rotation={[Math.PI / 2, 0, 0]} castShadow>
+          <cylinderGeometry args={[0.31, 0.31, 0.92, 20, 1, false, -Math.PI / 2, Math.PI]} />
+          <meshStandardMaterial color={palette.coral} roughness={0.45} metalness={0.2} />
+        </mesh>
+        <mesh position={[0, 1.4, 0.465]}><circleGeometry args={[0.22, 20]} /><meshStandardMaterial color="#D9593F" /></mesh>
+        <group position={[0.34, 1.4, 0.2]}>
+          <RoundedBox args={[0.04, 0.46, 0.05]} radius={0.015} smoothness={2} position={[0, 0.2, 0]}><meshStandardMaterial color={palette.dark} /></RoundedBox>
+          <RoundedBox args={[0.04, 0.14, 0.22]} radius={0.02} smoothness={2} position={[0, 0.37, 0.1]}><meshStandardMaterial color={palette.yellow} /></RoundedBox>
+        </group>
       </group>
       {contactItems.map((_, i) => <ContactSpot key={i} index={i} />)}
     </group>

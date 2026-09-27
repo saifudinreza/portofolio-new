@@ -6,6 +6,7 @@ import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js
 import { palette, pond, pondDistance, rng } from './layout';
 import { actors, type Actor } from './actors';
 import { splash } from '../ui/sound';
+import { mossyStoneMaterial, rockGeometry } from './stone';
 
 const MAX_RIPPLES = 12;
 const FISH_COUNT = 9;
@@ -223,7 +224,7 @@ export function Pond() {
       const [x, z] = onEllipse(a, 1.03 + r() * 0.07);
       rocks.push({ x, z, s: 0.3 + r() * 0.35, yaw: r() * Math.PI * 2 });
     }
-    const rockMesh = new THREE.InstancedMesh(new THREE.DodecahedronGeometry(1, 0), new THREE.MeshStandardMaterial({ flatShading: true, roughness: 0.95 }), rocks.length);
+    const rockMesh = new THREE.InstancedMesh(rockGeometry(3, 1), mossyStoneMaterial(0.5), rocks.length);
     const m = new THREE.Matrix4();
     const q = new THREE.Quaternion();
     const e = new THREE.Euler();

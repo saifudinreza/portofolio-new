@@ -4,14 +4,14 @@ import { rng } from './layout';
 
 const cache = new Map<string, THREE.Texture>();
 
-function draw(size: [number, number], paint: (g: CanvasRenderingContext2D, w: number, h: number) => void) {
+export function draw(size: [number, number], paint: (g: CanvasRenderingContext2D, w: number, h: number) => void) {
   const c = document.createElement('canvas');
   [c.width, c.height] = size;
   paint(c.getContext('2d')!, c.width, c.height);
   return c;
 }
 
-function texture(key: string, make: () => HTMLCanvasElement, { srgb = true, repeat = [1, 1] as [number, number] } = {}) {
+export function texture(key: string, make: () => HTMLCanvasElement, { srgb = true, repeat = [1, 1] as [number, number] } = {}) {
   const hit = cache.get(key);
   if (hit) return hit;
   const t = new THREE.CanvasTexture(make());

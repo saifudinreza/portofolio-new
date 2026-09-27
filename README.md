@@ -43,6 +43,7 @@ Graphics quality is **Auto** by default and can be fixed to Low, Medium or High 
 - The car is built from rounded primitives: clearcoat paint, see-through glass with seats inside, chrome grille and five-spoke rims, bulging tyres with tread, `REZA` plates, working brake lights, a headlight pool on the ground, visual suspension and a flapping antenna flag. Driving kicks up dust, braking and sliding leave skid marks, the exhaust smokes and boost lights a flame.
 - The island has a sky dome with drifting clouds, a sea with foam around rocky cliffs, a sandy ground with a normal map, roads with ragged edges and wheel ruts, bushes, flowers, fences, street lamps, benches, butterflies and leaves on the wind.
 - Motion respects `prefers-reduced-motion`: no camera shake, a still intro view and instant UI transitions.
+- **Ground and props**: stone paving on the home plaza, the projects courtyard and in front of the contact pads, crumbling into the sand at the edges, with fallen leaves over roads and paving. Mossy organic rocks, mushrooms, petal flowers, garden lamps with warm lanterns, stone lanterns round the plaza, a signpost pointing to every area, a proper mailbox, and bevelled project props. Barrels, a crate stack and a beach ball to knock about (they sleep in the physics engine until something touches them), fireflies over the grass on Medium and High, and a floating ↵ marker above every spot you can park on.
 
 ## Tech stack and why
 
@@ -101,6 +102,9 @@ src/
     Zones.tsx            projects, warehouse, about and contact areas
     Environment.tsx      ground, roads, ramp, cones, sun
     Props.tsx            little models that float over each project pad
+    Decor.tsx            paving, fallen leaves, rocks, mushrooms, signpost, lanterns, knockables, fireflies, ↵ markers
+    stone.ts             organic rock geometry and mossy stone material
+    decorTextures.ts     paving, light pool, fallen leaf and marker textures
     common.tsx           sensors, ground text, signboards
     layout.ts            positions, roads and colour palette
   ui/                    loader, top bar, driving HUD and mini-map, cards, touch controls, classic view

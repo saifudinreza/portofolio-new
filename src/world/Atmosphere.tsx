@@ -1,10 +1,10 @@
 import { useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { Environment, Lightformer } from '@react-three/drei';
+import { mossyStoneMaterial, rockGeometry } from './stone';
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { WORLD_SIZE, palette, rng } from './layout';
-import { mossyStoneMaterial, rockGeometry } from './stone';
 
 const HALF = WORLD_SIZE / 2;
 export const SEA_LEVEL = -1.4;

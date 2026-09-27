@@ -22,16 +22,27 @@ An interactive portfolio where you drive a small car around an island to explore
 - A jump ramp and a cone slalom, just for fun.
 - **Classic view**: the whole portfolio as a normal scrollable page, for recruiters in a hurry and for devices without WebGL.
 
-Controls: `W A S D` or arrow keys to drive, `Shift` boost, `Space` brake, hold `H` for the horn, `M` mute, `R` reset, scroll to zoom. Phones and tablets get on-screen pedals and a horn button. The top bar lets you jump straight to any area, switch graphics between **HD** and **Lite**, and set the volume.
+Controls: `W A S D` or arrow keys to drive, `Shift` boost, `Space` brake, hold `H` for the horn, `M` mute, `R` reset, scroll to zoom. On phones and tablets a thumb joystick (or arrow buttons, switchable) drives the car, with boost and horn buttons, and the phone buzzes on crashes. The top bar jumps straight to any area and holds the graphics and sound settings. A speedometer with a boost light and a mini-map (areas, pond, people, the car) sit in the corner while you drive.
 
 ## Graphics and performance
 
-- **HD** (default on desktop): image-based reflections from a few `Lightformer` panels (no HDRI file), plus post-processing: bloom on lights and emissives, ACES tone mapping, a light warm grade, vignette and SMAA. Ambient occlusion (N8AO) is tried for the first few seconds and switches itself off if the frame rate drops under 50 FPS, since it is the most expensive pass.
-- **Lite** (default on touch devices): no post-processing and no environment map; everything else stays.
+Graphics quality is **Auto** by default and can be fixed to Low, Medium or High from the top bar (remembered per browser):
+
+| Tier | Resolution | Shadows | Reflections | Post-processing | Grass |
+| --- | --- | --- | --- | --- | --- |
+| Low | DPR ≤ 1 | off | off | off | 45% |
+| Medium | DPR ≤ 1.25 | on | on | off | 75% |
+| High | DPR ≤ 1.75 | on | on | bloom, ACES tone mapping, grade, vignette, SMAA, adaptive AO | 100% |
+
+**Auto** starts at Medium on desktop and Low on touch devices, then drei's `PerformanceMonitor` steps it down when the frame rate sits under 48 FPS and up when it holds above 58; after a few back-and-forths it settles on the lower tier. Ambient occlusion (N8AO) on High is tried for a few seconds and drops itself if the frame rate falls under 50 FPS.
+
+- **Loading in stages.** The page first paints a static loader from `index.html`, then a small React chunk (about 81 kB gzipped) for the UI. The 3D chunk (three.js, R3F, drei, Rapier, the world: about 1.2 MB gzipped) only starts downloading on the first mouse move, touch, key or wheel, or 4 s after the page has loaded, so opening the link costs little and the landing page stays responsive. Post-processing (about 162 kB gzipped) is its own chunk and only loads on High.
+- **No asset files to compress.** Every texture is drawn on a canvas at startup and the car, props and sounds are generated in code, so there are no `.glb`, KTX2 or audio files.
+- **Lighthouse** (production build, Lighthouse 12, landing page): desktop 99 performance / 100 accessibility / 100 best practices / 100 SEO; mobile 87 to 89 performance on repeat runs (one cold first run scored 55) with 100 on the rest. Lighthouse runs headless without a GPU, so these scores describe the landing page before the 3D world loads; the frame rates below describe the world itself.
+- **Frame rate** (production build, driving at home, 1422×647 at 1.35 DPR, integrated AMD Radeon, Playwright Chromium): Low about 28 to 35 FPS, Medium about 22, High about 18 to 20. The previous release measured about 23 FPS in its Lite mode in the same session, so Low is roughly 30% faster than before. That machine and browser are slower than the earlier measurements, so the ≥ 55 FPS target for mid-range laptops is not confirmed yet; Auto falls back to Low on such hardware.
 - The car is built from rounded primitives: clearcoat paint, see-through glass with seats inside, chrome grille and five-spoke rims, bulging tyres with tread, `REZA` plates, working brake lights, a headlight pool on the ground, visual suspension and a flapping antenna flag. Driving kicks up dust, braking and sliding leave skid marks, the exhaust smokes and boost lights a flame.
 - The island has a sky dome with drifting clouds, a sea with foam around rocky cliffs, a sandy ground with a normal map, roads with ragged edges and wheel ruts, bushes, flowers, fences, street lamps, benches, butterflies and leaves on the wind.
-- **Asset budget:** every texture is drawn on a canvas at startup, so the visual upgrade adds no image, model or audio files. The code grows the 3D chunk by about 27 kB gzipped; the post-processing library (about 162 kB gzipped) is a separate chunk that only loads on HD.
-- Measured on the development laptop (integrated GPU, 1422×647 at 1.35 DPR): the previous version ran at about 80 FPS, the new Lite mode at about 63 FPS and HD at about 47 FPS (AO switched itself off there).
+- Motion respects `prefers-reduced-motion`: no camera shake, a still intro view and instant UI transitions.
 
 ## Tech stack and why
 
@@ -56,7 +67,9 @@ npm run build     # type-check + production build into dist/
 npm run preview   # serve the production build
 ```
 
-Add `?debug` to the URL to see physics colliders.
+Add `?debug` to the URL to see physics colliders and the raw input, and `?touch` to try the phone controls on a laptop.
+
+For production, set `VITE_SITE_URL` (for example `https://your-site.vercel.app`) in the Vercel project settings so the Open Graph and Twitter preview image URLs in `index.html` are absolute.
 
 ## Deploy to Vercel
 
@@ -66,7 +79,7 @@ Add `?debug` to the URL to see physics colliders.
 
 ## Editing content
 
-All text lives in [`src/data/profile.ts`](src/data/profile.ts): summary, projects, skills, education, certifications and experience. Add a project there and it appears in both the 3D world and the classic view. Pad positions are in [`src/world/layout.ts`](src/world/layout.ts) (the grid holds 6 projects; add a position for a 7th).
+All text lives in [`src/data/profile.ts`](src/data/profile.ts): summary, projects, skills, education, certifications and experience. Give a project an `image` (for example `/projects/kasirai.jpg` placed in `public/projects/`) and its card shows that screenshot instead of the coloured cover. Add a project there and it appears in both the 3D world and the classic view. Pad positions are in [`src/world/layout.ts`](src/world/layout.ts) (the grid holds 6 projects; add a position for a 7th).
 
 ## Project structure
 
@@ -75,12 +88,13 @@ src/
   data/profile.ts        all portfolio content
   store.ts               Zustand store + driving input
   world/
-    Experience.tsx       scene root: lights, physics world, all areas
+    Scene.tsx            the lazily loaded 3D side: canvas, quality-dependent resolution, load progress
+    Experience.tsx       scene root: lights, physics world, all areas, auto quality
     Car.tsx              arcade car physics, follow camera, collision sounds
     CarModel.tsx         the car's looks: body, glass, lights, wheels, suspension, flag
     CarFx.tsx            wheel dust, skid marks, exhaust smoke, boost flame
     Atmosphere.tsx       sky, clouds, sea, cliffs, environment lighting
-    PostFx.tsx           post-processing for HD quality
+    PostFx.tsx           post-processing for High quality
     Details.tsx          bushes, flowers, lamps, fences, benches, butterflies, leaves
     textures.ts          procedural canvas textures (sand, roads, wood, tyre tread)
     Letters.tsx          knockable 3D letters
@@ -89,8 +103,9 @@ src/
     Props.tsx            little models that float over each project pad
     common.tsx           sensors, ground text, signboards
     layout.ts            positions, roads and colour palette
-  ui/                    loader, top bar, cards, touch pedals, classic view
+  ui/                    loader, top bar, driving HUD and mini-map, cards, touch controls, classic view
 public/fonts/            Archivo Black + DM Sans (OFL), plus a typeface JSON for the 3D letters
+public/og.jpg            social preview image
 ```
 
 ## Credits

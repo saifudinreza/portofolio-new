@@ -14,7 +14,7 @@ const HALF = WORLD_SIZE / 2;
 export function Lights() {
   const sun = useRef<THREE.DirectionalLight>(null);
   const target = useMemo(() => new THREE.Object3D(), []);
-  const high = useStore((s) => s.quality === 'high');
+  const tier = useStore((s) => s.tier);
   useFrame(() => {
     if (!sun.current) return;
     sun.current.position.set(carState.x + 12, 22, carState.z + 8);
@@ -23,14 +23,15 @@ export function Lights() {
   });
   return (
     <>
-      {/* on high the environment map adds soft fill too, so the hemisphere light steps down */}
-      <hemisphereLight args={['#FFF4E0', '#C9A77A', high ? 0.8 : 1.3]} />
+      {/* above low the environment map adds soft fill too, so the hemisphere light steps down */}
+      <hemisphereLight args={['#FFF4E0', '#C9A77A', tier === 'low' ? 1.3 : 0.8]} />
       <directionalLight
         ref={sun}
         target={target}
         intensity={2.2}
         color="#FFE9C7"
-        castShadow
+        // the shadow pass re-renders every caster, the first thing to go on low
+        castShadow={tier !== 'low'}
         shadow-mapSize={[2048, 2048]}
         shadow-camera-left={-26}
         shadow-camera-right={26}

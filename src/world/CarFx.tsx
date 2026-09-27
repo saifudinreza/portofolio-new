@@ -22,7 +22,8 @@ function toWorld(lx: number, lz: number) {
 
 /** Wheel dust, skid marks, exhaust smoke and the boost flame. */
 export function CarFx() {
-  const high = useStore((s) => s.quality === 'high');
+  const tier = useStore((s) => s.tier);
+  const rich = tier !== 'low';
 
   const fx = useMemo(() => {
     const hidden = new THREE.Matrix4().makeScale(0, 0, 0);
@@ -89,7 +90,7 @@ export function CarFx() {
 
     // Dust kicked up behind the rear wheels.
     if (onGround && speed > 4) {
-      fx.dustDebt += dt * speed * (high ? 2.2 : 1);
+      fx.dustDebt += dt * speed * (rich ? 2.2 : 1);
       while (fx.dustDebt >= 1) {
         fx.dustDebt -= 1;
         const [lx, lz] = REAR_WHEELS[Math.random() < 0.5 ? 0 : 1];
@@ -99,7 +100,7 @@ export function CarFx() {
     }
 
     // Thin exhaust smoke, thicker under throttle.
-    fx.smokeDebt += dt * (1.5 + Math.max(0, carState.throttle) * (carState.boost ? 14 : 7)) * (high ? 1 : 0.5);
+    fx.smokeDebt += dt * (1.5 + Math.max(0, carState.throttle) * (carState.boost ? 14 : 7)) * (rich ? 1 : 0.5);
     while (fx.smokeDebt >= 1) {
       fx.smokeDebt -= 1;
       const [ex, ez] = toWorld(EXHAUST[0], EXHAUST[2]);

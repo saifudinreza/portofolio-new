@@ -1,12 +1,14 @@
-import { useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { WORLD_SIZE, isClear, rng } from './layout';
 import { actors } from './actors';
+import { useStore, type Tier } from '../store';
 
 const HALF = WORLD_SIZE / 2;
 const SEGMENTS = 5;
 const MAX_STAMPS = 16;
+const GRASS_DENSITY: Record<Tier, number> = { low: 0.45, medium: 0.75, high: 1 };
 const TRAIL_SECONDS = 2.2;
 const TRAIL_SPACING = 0.9;
 const textClear: [number, number, number][] = [
@@ -121,7 +123,9 @@ export function Grass() {
   const trail = useRef<{ x: number; z: number; r: number; t: number }[]>([]);
   const lastDrop = useRef(new Map<object, { x: number; z: number }>());
 
-  const { geometry, material, uniforms } = useMemo(() => {
+  const tier = useStore((st) => st.tier);
+
+  const { geometry, material, uniforms, count } = useMemo(() => {
     const { blades, tints, count } = scatter(coarse ? 26000 : 80000);
     const geometry = bladeGeometry();
     geometry.setAttribute('aBlade', new THREE.InstancedBufferAttribute(blades, 4));
@@ -141,8 +145,13 @@ export function Grass() {
         // blades are lit like the ground on both faces, so ignore the back-face normal flip
         .replace('#include <normal_fragment_begin>', '#include <normal_fragment_begin>\nnormal = normalize( vNormal );\nnonPerturbedNormal = normal;');
     };
-    return { geometry, material, uniforms };
+    return { geometry, material, uniforms, count };
   }, [coarse]);
+
+  // Blades were scattered one random tuft at a time, so drawing only the first N thins the meadow evenly.
+  useEffect(() => {
+    geometry.instanceCount = Math.round(count * GRASS_DENSITY[tier]);
+  }, [geometry, count, tier]);
 
   useFrame(({ clock }) => {
     const now = clock.elapsedTime;

@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
 import { CoefficientCombineRule, RigidBody, RoundCuboidCollider, useBeforePhysicsStep, useRapier, type CollisionEnterPayload, type RapierRigidBody } from '@react-three/rapier';
 import * as THREE from 'three';
@@ -9,6 +9,7 @@ import { emitImpact } from './impactQueue';
 import { CarModel } from './CarModel';
 import { carState } from './carState';
 import { actors, type Actor } from './actors';
+import { reducedMotion, vibrate } from '../ui/device';
 
 // Arcade driving tuning. Units: metres, seconds.
 const MAX_SPEED = 13;
@@ -55,6 +56,7 @@ export function Car() {
   const aspectZoom = viewport.width / viewport.height < 0.8 ? 1.6 : 1;
   const teleport = useStore((s) => s.teleport);
   const started = useStore((s) => s.started);
+  const still = useMemo(() => reducedMotion(), []);
   // Velocity before each of the last few physics steps. Collision events are only handed over once per
   // render frame, which can hold several steps on a slow device, so the impact is judged against the
   // fastest recent approach rather than just the latest (already stopped) velocity.
@@ -87,8 +89,9 @@ export function Car() {
     const p = e.manifold.numSolverContacts() > 0 ? e.manifold.solverContactPoint(0) : e.other.collider.translation();
     impact(material, strength, p);
     emitImpact(p, material, strength);
-    // landings shouldn't rattle the camera, crashes into things should
+    // landings shouldn't rattle the camera (or the phone), crashes into things should
     if (material !== 'ground' && strength > 0.35) shake.current = Math.max(shake.current, strength);
+    if (material !== 'ground' && strength > 0.2) vibrate(Math.round(15 + strength * 45));
   };
 
   const place = (x: number, z: number, yaw: number) => {
@@ -122,7 +125,7 @@ export function Car() {
     return () => window.removeEventListener('wheel', onWheel);
   }, []);
 
-  useFrame((_, rawDt) => {
+  useFrame(({ clock }, rawDt) => {
     const rb = body.current;
     if (!rb) return;
     const dt = Math.min(rawDt, 1 / 30);
@@ -209,15 +212,25 @@ export function Car() {
       chassis.current.rotation.z = t.roll;
     }
 
-    // Camera: fixed isometric-ish angle that trails the car smoothly.
-    const target = new THREE.Vector3(pos.x, 0, pos.z);
-    const desired = target.clone().add(CAMERA_OFFSET.clone().multiplyScalar(zoom * aspectZoom));
-    const k = 1 - Math.exp(-4 * dt);
-    camera.position.lerp(desired, k);
-    lookAt.current.lerp(target, k);
-    camera.lookAt(lookAt.current);
+    if (!started) {
+      // Behind the loader: a slow cinematic orbit around the island (a fixed view with reduced motion).
+      // Once driving starts, the follow camera below lerps smoothly from wherever this left it.
+      const a = still ? 0.7 : clock.elapsedTime * 0.08 + 0.7;
+      // stays under the clouds (y 26+) so none of them drifts through the view
+      camera.position.set(Math.sin(a) * 52, 22, 4 + Math.cos(a) * 52);
+      lookAt.current.set(0, 0, 2);
+      camera.lookAt(lookAt.current);
+    } else {
+      // Camera: fixed isometric-ish angle that trails the car smoothly.
+      const target = new THREE.Vector3(pos.x, 0, pos.z);
+      const desired = target.clone().add(CAMERA_OFFSET.clone().multiplyScalar(zoom * aspectZoom));
+      const k = 1 - Math.exp(-(camera.position.distanceTo(desired) > 25 ? 2 : 4) * dt);
+      camera.position.lerp(desired, k);
+      lookAt.current.lerp(target, k);
+      camera.lookAt(lookAt.current);
+    }
     // Short decaying jolt after a hard crash; the follow lerp above pulls the camera back next frame.
-    if (shake.current > 0.01) {
+    if (shake.current > 0.01 && !still) {
       const a = shake.current * 0.3;
       camera.position.x += (Math.random() - 0.5) * a;
       camera.position.y += (Math.random() - 0.5) * a;

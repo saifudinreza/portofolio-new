@@ -142,12 +142,24 @@ function rpmForSpeed(speed: number) {
   return g === 0 ? IDLE_RPM + f * 4250 : 2300 + f * 2800;
 }
 
+/**
+ * A warm, band-limited "soft saw": only the first few harmonics, each falling off faster than a real saw's
+ * 1/n. Raw saws and squares carry harmonics all the way up, which is what made the old engine buzzy and
+ * tiring at full throttle.
+ */
+function engineWave(c: AudioContext) {
+  const amps = [0, 1, 0.45, 0.22, 0.1, 0.045, 0.02];
+  return c.createPeriodicWave(new Float32Array(amps.length), new Float32Array(amps));
+}
+
 function createEngine(c: AudioContext, dest: AudioNode) {
   const pan = makePanner(c, dest);
-  const osc = (type: OscillatorType, gain: number, into: AudioNode, detune = 0) => {
+  const soft = engineWave(c);
+  const osc = (type: OscillatorType | 'soft', gain: number, into: AudioNode, detune = 0) => {
     const o = c.createOscillator();
     const g = c.createGain();
-    o.type = type;
+    if (type === 'soft') o.setPeriodicWave(soft);
+    else o.type = type;
     o.detune.value = detune;
     g.gain.value = gain;
     o.connect(g).connect(into);
@@ -162,33 +174,34 @@ function createEngine(c: AudioContext, dest: AudioNode) {
     return n;
   };
 
-  // Engine: two detuned saws on the firing frequency plus a square sub, "chugged" by an LFO at half
-  // the firing rate, soft-clipped and low-passed. Revs move the pitch, the filter and the chug together.
+  // Engine: two detuned soft saws (firing frequency and its octave) plus a sine sub, "chugged" by an LFO at
+  // half the firing rate, gently saturated and low-passed. Revs move the pitch, the filter and the chug together.
   const mix = c.createGain();
   const chug = c.createGain();
   chug.gain.value = 0.7;
   const shaper = c.createWaveShaper();
-  shaper.curve = softClip(2.5);
+  shaper.curve = softClip(1.4);
   shaper.oversample = '2x';
   const lowpass = c.createBiquadFilter();
   lowpass.type = 'lowpass';
-  lowpass.Q.value = 1.2;
+  // no resonant peak: a bump at the cutoff is what whistled as the revs swept through it
+  lowpass.Q.value = 0.5;
   const body = c.createGain();
   body.gain.value = 0;
   mix.connect(chug).connect(shaper).connect(lowpass).connect(body).connect(pan);
-  const saw1 = osc('sawtooth', 0.5, mix);
-  const saw2 = osc('sawtooth', 0.3, mix, 9);
-  const sub = osc('square', 0.35, mix);
+  const saw1 = osc('soft', 0.55, mix);
+  const saw2 = osc('soft', 0.22, mix, 9);
+  const sub = osc('sine', 0.45, mix);
   const lfoDepth = c.createGain();
   lfoDepth.gain.value = 0.3;
   const lfo = osc('sine', 1, lfoDepth);
   lfoDepth.connect(chug.gain);
   const rumbleFilter = c.createBiquadFilter();
   rumbleFilter.type = 'bandpass';
-  rumbleFilter.frequency.value = 700;
+  rumbleFilter.frequency.value = 450;
   rumbleFilter.Q.value = 0.7;
   const rumbleGain = c.createGain();
-  rumbleGain.gain.value = 0.12;
+  rumbleGain.gain.value = 0.05;
   loopNoise().connect(rumbleFilter).connect(rumbleGain).connect(mix);
 
   // Turbo whine that only shows up while boosting.
@@ -200,8 +213,8 @@ function createEngine(c: AudioContext, dest: AudioNode) {
   // Tyre squeal under braking: band-passed noise.
   const skidFilter = c.createBiquadFilter();
   skidFilter.type = 'bandpass';
-  skidFilter.frequency.value = 2300;
-  skidFilter.Q.value = 5;
+  skidFilter.frequency.value = 1600;
+  skidFilter.Q.value = 3;
   const skidGain = c.createGain();
   skidGain.gain.value = 0;
   loopNoise().connect(skidFilter).connect(skidGain).connect(pan);
@@ -246,14 +259,15 @@ function createEngine(c: AudioContext, dest: AudioNode) {
       setParam(saw2.frequency, firing * 2, now);
       setParam(sub.frequency, firing / 2, now);
       setParam(lfo.frequency, firing / 2, now);
-      setParam(lowpass.frequency, 250 + rpm * 0.35 + load * 400 + boost * 800, now);
-      setParam(body.gain, 0.16 + load * 0.12 + boost * 0.08, now, 0.08);
-      setParam(whine.frequency, 1800 + rpm * 0.8, now);
-      setParam(whineGain.gain, boost * 0.025, now, 0.15);
+      // capped well below the range the ear finds harsh, even at full revs and boost
+      setParam(lowpass.frequency, Math.min(1500, 200 + rpm * 0.18 + load * 220 + boost * 300), now);
+      setParam(body.gain, 0.09 + load * 0.05 + boost * 0.025, now, 0.12);
+      setParam(whine.frequency, 1100 + rpm * 0.35, now);
+      setParam(whineGain.gain, boost * 0.01, now, 0.4);
 
       const skidding = s.brake && s.grounded && Math.abs(s.speed) > 2;
-      setParam(skidGain.gain, skidding ? Math.min(Math.abs(s.speed) / 10, 1) * 0.22 : 0, now, skidding ? 0.03 : 0.08);
-      setParam(skidFilter.frequency, 1900 + Math.abs(s.speed) * 40, now);
+      setParam(skidGain.gain, skidding ? Math.min(Math.abs(s.speed) / 10, 1) * 0.11 : 0, now, skidding ? 0.08 : 0.12);
+      setParam(skidFilter.frequency, 1300 + Math.abs(s.speed) * 25, now);
 
       if (s.horn !== horn) {
         horn = s.horn;

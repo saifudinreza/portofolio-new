@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { CuboidCollider, CylinderCollider, RigidBody } from '@react-three/rapier';
 import * as THREE from 'three';
@@ -6,6 +6,8 @@ import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js
 import { WORLD_SIZE, distanceToSegment, isClear, palette, pond, pondDistance, rng, roadSegments, trails } from './layout';
 import { carState } from './carState';
 import { woodMap } from './textures';
+import { setCardShare, shrubParts } from './foliage';
+import { useStore } from '../store';
 
 const HALF = WORLD_SIZE / 2;
 const up = new THREE.Vector3(0, 1, 0);
@@ -36,18 +38,16 @@ const mat = (p: THREE.Vector3, yaw: number, s: THREE.Vector3 | number) =>
 function useVegetation() {
   return useMemo(() => {
     const r = rng(303);
-    const bushGeo = mergeGeometries([
-      new THREE.IcosahedronGeometry(0.55, 1).translate(0, 0.4, 0),
-      new THREE.IcosahedronGeometry(0.42, 1).translate(0.45, 0.3, 0.1),
-      new THREE.IcosahedronGeometry(0.38, 1).translate(-0.4, 0.28, -0.12),
-    ])!;
+    const shrub = shrubParts();
     const bushes: { m: THREE.Matrix4; color: string }[] = [];
     for (let guard = 0; bushes.length < 70 && guard < 4000; guard++) {
       const x = (r() * 2 - 1) * HALF;
       const z = (r() * 2 - 1) * HALF;
       if (!meadow(x, z, 3)) continue;
-      const s = 0.7 + r() * 0.7;
-      bushes.push({ m: mat(new THREE.Vector3(x, 0, z), r() * 6.3, new THREE.Vector3(s, s * (0.8 + r() * 0.3), s)), color: ['#5E9E52', '#6BAA5C', '#4E8C47', '#7BB463'][Math.floor(r() * 4)] });
+      const s = 0.55 + r() * 0.5;
+      // the leaf colours live in the shrub's vertex colours; per bush only the lightness shifts
+      const l = Math.round((0.85 + r() * 0.25) * 255);
+      bushes.push({ m: mat(new THREE.Vector3(x, 0, z), r() * 6.3, new THREE.Vector3(s, s * (0.8 + r() * 0.3), s)), color: `rgb(${l},${l},${l})` });
     }
 
     // Flowers grow in small patches: a stem and a bright low-poly head.
@@ -72,7 +72,9 @@ function useVegetation() {
     }
 
     return {
-      bushes: instanced(bushGeo, new THREE.MeshStandardMaterial({ roughness: 0.9, flatShading: true }), bushes),
+      // cards receive shadows, the solid cores cast them
+      bushes: instanced(shrub.cards, shrub.cardMaterial, bushes, false),
+      bushCores: instanced(shrub.core, shrub.coreMaterial, bushes),
       stems: instanced(new THREE.CylinderGeometry(0.008, 0.01, 1, 4).translate(0, 0.5, 0), new THREE.MeshStandardMaterial({ color: '#5E8F46' }), stems, false),
       heads: instanced(new THREE.DodecahedronGeometry(0.05, 0), new THREE.MeshStandardMaterial({ roughness: 0.6, flatShading: true }), heads, false),
     };
@@ -220,6 +222,8 @@ export function Details() {
   const veg = useVegetation();
   const furniture = useFurniture();
   const critters = useCritters();
+  const tier = useStore((st) => st.tier);
+  useEffect(() => setCardShare(veg.bushes.geometry, tier), [veg, tier]);
   const tmp = useMemo(() => ({ m: new THREE.Matrix4(), q: new THREE.Quaternion(), e: new THREE.Euler(), p: new THREE.Vector3(), s: new THREE.Vector3() }), []);
 
   useFrame(({ clock }, rawDt) => {
@@ -279,6 +283,7 @@ export function Details() {
         ))}
       </RigidBody>
       <primitive object={veg.bushes} />
+      <primitive object={veg.bushCores} />
       <primitive object={veg.stems} />
       <primitive object={veg.heads} />
       {furniture.meshes.map((m, i) => (

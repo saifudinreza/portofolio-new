@@ -4,7 +4,6 @@ import { CylinderCollider, RigidBody } from '@react-three/rapier';
 import * as THREE from 'three';
 import { WORLD_SIZE, distanceToSegment, isClear, palette, pondDistance, rng, trails } from './layout';
 import { actors, type Actor } from './actors';
-import { thud } from '../ui/sound';
 
 const HALF = WORLD_SIZE / 2;
 const TREE_HEIGHT = 2.6;
@@ -198,7 +197,6 @@ export function Trees() {
           t.vx += pvx * kick;
           t.vz += pvz * kick;
           spawnLeaves(t, pvx / speed, pvz / speed, speed);
-          thud(Math.min(speed / 15, 1), { x: t.x, y: 1.5 * t.s, z: t.z });
         }
       }
       t.vx += ax * dt;
@@ -249,7 +247,7 @@ export function Trees() {
   return (
     <group>
       {/* colliders stay static; only the visuals sway */}
-      <RigidBody type="fixed" colliders={false}>
+      <RigidBody type="fixed" colliders={false} userData={{ material: 'foliage' }}>
         {trees.map((t, i) => (
           <CylinderCollider key={i} args={[1.2 * t.s, 0.3 * t.s]} position={[t.x, 1.2 * t.s, t.z]} />
         ))}

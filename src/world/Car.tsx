@@ -1,10 +1,11 @@
 import { useEffect, useRef } from 'react';
 import { useFrame, useThree } from '@react-three/fiber';
-import { CoefficientCombineRule, RigidBody, RoundCuboidCollider, useRapier, type RapierRigidBody } from '@react-three/rapier';
+import { CoefficientCombineRule, RigidBody, RoundCuboidCollider, useBeforePhysicsStep, useRapier, type CollisionEnterPayload, type RapierRigidBody } from '@react-three/rapier';
 import * as THREE from 'three';
 import { input, readDriveInput, useStore } from '../store';
 import { zones, palette, pondDistance } from './layout';
-import { updateCarAudio, updateListener } from '../ui/sound';
+import { impact, updateCarAudio, updateListener, type SurfaceMaterial } from '../ui/sound';
+import { emitImpact } from './impactQueue';
 import { carState } from './carState';
 import { actors, type Actor } from './actors';
 
@@ -21,6 +22,12 @@ const PARK_SPEED = 0.3; // below this with no throttle the parking brake holds t
 const CAR_GRASS_RADIUS = 1.8;
 const WATER_SPEED = 0.45; // top speed multiplier while wading through the pond
 const WATER_DRAG = 1.5;
+// Collisions: closing speed along the contact normal (m/s) below which nothing is heard, the speed that
+// counts as a full-strength crash, and how long the same collider stays quiet after making a sound.
+const IMPACT_MIN = 1.2;
+const IMPACT_FULL = 12;
+const IMPACT_COOLDOWN = 0.35;
+const VEL_HISTORY = 6; // physics steps (~0.1 s at 60 Hz)
 
 const CAMERA_OFFSET = new THREE.Vector3(4, 14, 14);
 let zoom = 1;
@@ -47,6 +54,41 @@ export function Car() {
   const aspectZoom = viewport.width / viewport.height < 0.8 ? 1.6 : 1;
   const teleport = useStore((s) => s.teleport);
   const started = useStore((s) => s.started);
+  // Velocity before each of the last few physics steps. Collision events are only handed over once per
+  // render frame, which can hold several steps on a slow device, so the impact is judged against the
+  // fastest recent approach rather than just the latest (already stopped) velocity.
+  const velHistory = useRef<{ x: number; y: number; z: number }[]>([]);
+  useBeforePhysicsStep(() => {
+    const rb = body.current;
+    if (!rb) return;
+    const v = rb.linvel();
+    const h = velHistory.current;
+    h.push({ x: v.x, y: v.y, z: v.z });
+    if (h.length > VEL_HISTORY) h.shift();
+  });
+  const lastImpact = useRef(new Map<number, number>());
+  const shake = useRef(0);
+
+  const onCollision = (e: CollisionEnterPayload) => {
+    const material = ((e.other.rigidBody?.userData as { material?: SurfaceMaterial } | undefined)?.material) ?? 'heavy';
+    // Only the part of the velocity going into the surface counts, so driving up the ramp or
+    // scraping along a wall is silent while hitting it head-on is loud.
+    const n = e.manifold.normal();
+    let closing = 0;
+    for (const v of velHistory.current) closing = Math.max(closing, Math.abs(v.x * n.x + v.y * n.y + v.z * n.z));
+    if (closing < IMPACT_MIN) return;
+    const now = performance.now() / 1000;
+    const key = e.other.collider.handle;
+    if (now - (lastImpact.current.get(key) ?? -Infinity) < IMPACT_COOLDOWN) return;
+    lastImpact.current.set(key, now);
+
+    const strength = THREE.MathUtils.clamp((closing - IMPACT_MIN) / (IMPACT_FULL - IMPACT_MIN), 0, 1);
+    const p = e.manifold.numSolverContacts() > 0 ? e.manifold.solverContactPoint(0) : e.other.collider.translation();
+    impact(material, strength, p);
+    emitImpact(p, material, strength);
+    // landings shouldn't rattle the camera, crashes into things should
+    if (material !== 'ground' && strength > 0.35) shake.current = Math.max(shake.current, strength);
+  };
 
   const place = (x: number, z: number, yaw: number) => {
     const rb = body.current;
@@ -168,6 +210,14 @@ export function Car() {
     camera.position.lerp(desired, k);
     lookAt.current.lerp(target, k);
     camera.lookAt(lookAt.current);
+    // Short decaying jolt after a hard crash; the follow lerp above pulls the camera back next frame.
+    if (shake.current > 0.01) {
+      const a = shake.current * 0.3;
+      camera.position.x += (Math.random() - 0.5) * a;
+      camera.position.y += (Math.random() - 0.5) * a;
+      camera.position.z += (Math.random() - 0.5) * a;
+      shake.current *= Math.exp(-9 * dt);
+    }
 
     // Sound: the listener rides on the camera, the engine/horn/tyres sit on the car.
     camera.getWorldDirection(tmpForward);
@@ -206,6 +256,7 @@ export function Car() {
       canSleep={false}
       ccd
       userData={{ isCar: true }}
+      onCollisionEnter={onCollision}
     >
       <RoundCuboidCollider args={[0.45, 0.2, 0.85, 0.1]} position={[0, -0.1, 0]} friction={0} frictionCombineRule={CoefficientCombineRule.Min} restitution={0.05} density={2} />
       <group ref={chassis}>

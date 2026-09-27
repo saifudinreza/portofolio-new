@@ -274,10 +274,107 @@ export function updateCarAudio(s: Parameters<ReturnType<typeof createEngine>['up
   engine.update(s);
 }
 
+// ---------- collisions ----------
+
+/** What a collider is made of, set as `userData.material` on its RigidBody. Picks the impact sound and debris. */
+export type SurfaceMaterial = 'wood' | 'plastic' | 'metal' | 'heavy' | 'ground' | 'foliage' | 'stone' | 'npc';
+
+type Tone = { freq: number; decay: number; gain: number; type?: OscillatorType; drop?: number };
+type Strike = { partials: Tone[]; noise?: { freq: number; q: number; decay: number; gain: number; type?: BiquadFilterType } };
+
+// Each material is a few decaying partials plus a filtered noise "strike". Metal gets long inharmonic
+// ringing, wood short hollow knocks, plastic a bright bonk, heavy things a low thump.
+const strikes: Record<Exclude<SurfaceMaterial, 'foliage'>, Strike> = {
+  wood: {
+    partials: [{ freq: 190, decay: 0.16, gain: 0.35, type: 'triangle' }, { freq: 430, decay: 0.09, gain: 0.2 }, { freq: 1020, decay: 0.04, gain: 0.08 }],
+    noise: { freq: 1600, q: 1.2, decay: 0.04, gain: 0.25 },
+  },
+  plastic: {
+    partials: [{ freq: 540, decay: 0.12, gain: 0.28, type: 'triangle', drop: 0.7 }, { freq: 1250, decay: 0.05, gain: 0.08 }],
+    noise: { freq: 3200, q: 0.8, decay: 0.03, gain: 0.15, type: 'highpass' },
+  },
+  metal: {
+    partials: [
+      { freq: 221, decay: 1.1, gain: 0.18 },
+      { freq: 563, decay: 0.8, gain: 0.14 },
+      { freq: 1041, decay: 0.6, gain: 0.1 },
+      { freq: 1717, decay: 0.4, gain: 0.07 },
+      { freq: 2690, decay: 0.25, gain: 0.05 },
+    ],
+    noise: { freq: 4000, q: 0.7, decay: 0.05, gain: 0.2 },
+  },
+  heavy: {
+    partials: [{ freq: 90, decay: 0.3, gain: 0.5, drop: 0.5 }, { freq: 170, decay: 0.12, gain: 0.15 }],
+    noise: { freq: 450, q: 0.7, decay: 0.12, gain: 0.3, type: 'lowpass' },
+  },
+  ground: {
+    partials: [{ freq: 70, decay: 0.25, gain: 0.45, drop: 0.55 }],
+    noise: { freq: 700, q: 0.6, decay: 0.15, gain: 0.25, type: 'lowpass' },
+  },
+  stone: {
+    partials: [{ freq: 320, decay: 0.07, gain: 0.25 }, { freq: 890, decay: 0.04, gain: 0.1 }],
+    noise: { freq: 2600, q: 1.5, decay: 0.06, gain: 0.3 },
+  },
+  npc: {
+    // soft cartoon "pwomp", never a painful sound
+    partials: [{ freq: 260, decay: 0.18, gain: 0.3, type: 'sine', drop: 0.55 }, { freq: 520, decay: 0.08, gain: 0.06, type: 'sine' }],
+  },
+};
+
+/**
+ * Collision sound for `material`. `strength` 0..1 scales loudness and nudges the pitch up, so a tap is a
+ * quiet low knock and a crash is a loud bright one.
+ */
+export function impact(material: SurfaceMaterial, strength: number, at?: Vec3) {
+  if (material === 'foliage') return thud(strength, at);
+  const o = oneShotOut(at);
+  if (!o) return;
+  const { c, out, done } = o;
+  const now = c.currentTime;
+  const s = strikes[material];
+  const loud = 0.15 + 0.85 * strength ** 0.8;
+  const pitch = 0.85 + 0.3 * strength + (Math.random() - 0.5) * 0.06; // slight random detune so repeats don't sound cloned
+  let last: AudioScheduledSourceNode | null = null;
+  let longest = 0;
+
+  for (const p of s.partials) {
+    const osc = c.createOscillator();
+    const gain = c.createGain();
+    osc.type = p.type ?? 'sine';
+    osc.frequency.setValueAtTime(p.freq * pitch, now);
+    if (p.drop) osc.frequency.exponentialRampToValueAtTime(p.freq * pitch * p.drop, now + p.decay);
+    gain.gain.setValueAtTime(0.0001, now);
+    gain.gain.exponentialRampToValueAtTime(p.gain * loud, now + 0.004);
+    gain.gain.exponentialRampToValueAtTime(0.0001, now + p.decay);
+    osc.connect(gain).connect(out);
+    osc.start(now);
+    osc.stop(now + p.decay + 0.02);
+    if (p.decay > longest) {
+      longest = p.decay;
+      last = osc;
+    }
+  }
+  if (s.noise) {
+    const n = s.noise;
+    const src = c.createBufferSource();
+    const filter = c.createBiquadFilter();
+    const gain = c.createGain();
+    src.buffer = noiseBuffer(c, n.decay + 0.02, (t) => (1 - t) ** 2);
+    filter.type = n.type ?? 'bandpass';
+    filter.frequency.value = n.freq * pitch;
+    filter.Q.value = n.q;
+    gain.gain.value = n.gain * loud;
+    src.connect(filter).connect(gain).connect(out);
+    src.start(now);
+    if (n.decay > longest) last = src;
+  }
+  if (last) last.onended = done;
+}
+
 // ---------- one-shots ----------
 
 /** Dull knock plus a leafy rustle for bumping into a tree; strength 0..1. */
-export function thud(strength = 1, at?: Vec3) {
+function thud(strength = 1, at?: Vec3) {
   const o = oneShotOut(at);
   if (!o) return;
   const { c, out, done } = o;

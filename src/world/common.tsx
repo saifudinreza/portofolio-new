@@ -68,7 +68,7 @@ export function Signboard({ position, rotation = 0, width = 4, height = 1.6, col
   const postH = 1.2 + height;
   return (
     <group position={position} rotation={[0, rotation, 0]}>
-      <RigidBody type="fixed" colliders="cuboid">
+      <RigidBody type="fixed" colliders="cuboid" userData={{ material: 'wood' }}>
         {[-width / 2 + 0.2, width / 2 - 0.2].map((x) => (
           <mesh key={x} position={[x, postH / 2, -0.05]} castShadow>
             <boxGeometry args={[0.18, postH, 0.18]} />

@@ -47,7 +47,7 @@ export function Letters({ text, size, depth, position, colors, gap = 0.12 }: Pro
         cursor += g.w + gap;
         if (g.h === 0) return null;
         return (
-          <RigidBody key={i} position={[x, 0.01, 0]} colliders={false} linearDamping={0.3} angularDamping={0.4}>
+          <RigidBody key={i} position={[x, 0.01, 0]} colliders={false} linearDamping={0.3} angularDamping={0.4} userData={{ material: 'metal' }}>
             <CuboidCollider args={[g.w / 2, g.h / 2, depth / 2 + 0.03]} position={[0, g.h / 2, 0]} mass={0.5} friction={0.9} />
             <mesh geometry={g.geo} castShadow receiveShadow>
               <meshStandardMaterial color={colors[i % colors.length]} roughness={0.5} />

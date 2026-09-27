@@ -92,7 +92,7 @@ export function Warehouse() {
         <meshStandardMaterial color={palette.woodDark} />
       </mesh>
       {/* back shelving */}
-      <RigidBody type="fixed" colliders="cuboid">
+      <RigidBody type="fixed" colliders="cuboid" userData={{ material: 'metal' }}>
         <mesh position={[warehouse.x, 1.6, warehouse.z - 5.4]} castShadow receiveShadow>
           <boxGeometry args={[12, 3.2, 0.6]} />
           <meshStandardMaterial color={palette.navy} />
@@ -106,7 +106,7 @@ export function Warehouse() {
       ))}
       <Text position={[warehouse.x, 2.4, warehouse.z - 5.08]} fontSize={0.7} color={palette.cream} font={DISPLAY_FONT} anchorX="center">WAREHOUSE</Text>
       {crates.map((c, i) => (
-        <RigidBody key={i} position={c.pos} colliders={false} linearDamping={0.2} angularDamping={0.3}>
+        <RigidBody key={i} position={c.pos} colliders={false} linearDamping={0.2} angularDamping={0.3} userData={{ material: 'wood' }}>
           <CuboidCollider args={[size / 2, size / 2, size / 2]} mass={0.3} friction={0.7} />
           <mesh castShadow receiveShadow>
             <boxGeometry args={[size, size, size]} />
@@ -142,7 +142,7 @@ export function AboutArea() {
       </group>
       {/* stack of books */}
       {[palette.coral, palette.teal, palette.yellow, palette.navy].map((c, i) => (
-        <RigidBody key={i} position={[x - 6, 0.2 + i * 0.36, z - 1 + (i % 2) * 0.1]} colliders="cuboid" mass={0.2}>
+        <RigidBody key={i} position={[x - 6, 0.2 + i * 0.36, z - 1 + (i % 2) * 0.1]} colliders="cuboid" mass={0.2} userData={{ material: 'wood' }}>
           <mesh castShadow><boxGeometry args={[1.6, 0.34, 1.1]} /><meshStandardMaterial color={c} /></mesh>
         </RigidBody>
       ))}

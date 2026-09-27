@@ -3,7 +3,8 @@ import { Physics } from '@react-three/rapier';
 import { Car } from './Car';
 import { Letters } from './Letters';
 import { AboutArea, ContactArea, ProjectsArea, Warehouse } from './Zones';
-import { Ground, HomeText, Lights, Paths, Playground, Trees } from './Environment';
+import { Ground, HomeText, Lights, Paths, Playground } from './Environment';
+import { Trees } from './Trees';
 import { Grass } from './Grass';
 import { letterColors, palette } from './layout';
 

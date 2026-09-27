@@ -54,3 +54,28 @@ export function thud(strength = 1) {
     // Audio is a nice-to-have; ignore browsers that block it.
   }
 }
+
+/** Watery splash for driving into the pond; strength 0..1. */
+export function splash(strength = 1) {
+  try {
+    ctx ??= new AudioContext();
+    const now = ctx.currentTime;
+    const len = Math.floor(ctx.sampleRate * 0.6);
+    const buf = ctx.createBuffer(1, len, ctx.sampleRate);
+    const data = buf.getChannelData(0);
+    for (let i = 0; i < len; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / len) ** 3;
+    const src = ctx.createBufferSource();
+    const filter = ctx.createBiquadFilter();
+    const gain = ctx.createGain();
+    src.buffer = buf;
+    filter.type = 'lowpass';
+    filter.Q.value = 4;
+    filter.frequency.setValueAtTime(3200, now);
+    filter.frequency.exponentialRampToValueAtTime(400, now + 0.5);
+    gain.gain.value = 0.25 * strength;
+    src.connect(filter).connect(gain).connect(ctx.destination);
+    src.start(now);
+  } catch {
+    // Audio is a nice-to-have; ignore browsers that block it.
+  }
+}

@@ -3,7 +3,7 @@ import { useFrame, useThree } from '@react-three/fiber';
 import { CoefficientCombineRule, RigidBody, RoundCuboidCollider, useRapier, type RapierRigidBody } from '@react-three/rapier';
 import * as THREE from 'three';
 import { input, readDriveInput, useStore } from '../store';
-import { zones, palette } from './layout';
+import { zones, palette, pondDistance } from './layout';
 import { honk } from '../ui/sound';
 import { carState } from './carState';
 import { actors, type Actor } from './actors';
@@ -19,6 +19,8 @@ const RIDE_HEIGHT = 0.4; // distance from body centre to the bottom of the wheel
 const ROLLING_RESISTANCE = 2; // constant deceleration when coasting, m/s²
 const PARK_SPEED = 0.3; // below this with no throttle the parking brake holds the car
 const CAR_GRASS_RADIUS = 1.8;
+const WATER_SPEED = 0.45; // top speed multiplier while wading through the pond
+const WATER_DRAG = 1.5;
 
 const CAMERA_OFFSET = new THREE.Vector3(4, 14, 14);
 let zoom = 1;
@@ -126,7 +128,8 @@ export function Car() {
     }
 
     if (grounded) {
-      const top = drive.boost ? BOOST_SPEED : MAX_SPEED;
+      const wet = pondDistance(pos.x, pos.z) < 1;
+      const top = (drive.boost ? BOOST_SPEED : MAX_SPEED) * (wet ? WATER_SPEED : 1);
       let push = 0;
       if (drive.throttle > 0 && fwdSpeed < top) push = drive.throttle * ACCEL * (drive.boost ? 1.35 : 1);
       if (drive.throttle < 0 && fwdSpeed > -REVERSE_SPEED) push = drive.throttle * ACCEL * (fwdSpeed > 0.5 ? 1.6 : 0.8);
@@ -135,6 +138,7 @@ export function Car() {
       let drag = 0;
       if (drive.throttle === 0) drag = fwdSpeed * 2.2 + Math.sign(fwdSpeed) * ROLLING_RESISTANCE;
       if (drive.brake) drag = fwdSpeed * 6 + Math.sign(fwdSpeed) * ROLLING_RESISTANCE;
+      if (wet) drag += fwdSpeed * WATER_DRAG;
       const along = (push - drag) * mass * dt;
       // Kill sideways sliding so the car carves instead of drifting on ice.
       const grip = -latSpeed * Math.min(1, GRIP * dt) * mass;

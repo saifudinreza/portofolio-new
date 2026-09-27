@@ -1,6 +1,7 @@
 import { useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { Environment, Lightformer } from '@react-three/drei';
+import { mossyStoneMaterial, rockGeometry } from './stone';
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { RIVER_HALF_WIDTH, WORLD_SIZE, palette, riverDistance, rng } from './layout';
@@ -185,7 +186,7 @@ export function Cliffs() {
         rocks.push({ x, z, y: -1.6 + r() * 1.1, s, yaw: r() * Math.PI * 2, tilt: (r() - 0.5) * 0.5 });
       }
     }
-    const inst = new THREE.InstancedMesh(new THREE.DodecahedronGeometry(1, 0), new THREE.MeshStandardMaterial({ flatShading: true, roughness: 0.95 }), rocks.length);
+    const inst = new THREE.InstancedMesh(rockGeometry(11, 1), mossyStoneMaterial(0.3), rocks.length);
     const m = new THREE.Matrix4();
     const q = new THREE.Quaternion();
     const e = new THREE.Euler();

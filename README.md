@@ -46,6 +46,7 @@ Graphics quality is **Auto** by default and can be fixed to Low, Medium or High 
 - **Trees and shrubs** in five kinds (green oak, autumn, sakura, pine, big shrub). Each canopy is a few hundred alpha-tested leaf cards whose normals point out from the canopy's volumes, around a solid dark core, so it shades as one soft mass and never shows the ground through gaps. Branched trunks with bark, wind sway, a shove when you brush past, and leaves that drift down near the car. The core casts the shadow; Low draws 60% of the cards.
 - **Grass**: 80k tapered blades (26k on phones) from dark roots to bright tips, tinted per clump between fresh green, deep green and a little dry straw, taller in open meadow and bunched up along the road edges. Low draws 45% of them, a little shorter.
 - Motion respects `prefers-reduced-motion`: no camera shake, a still intro view and instant UI transitions.
+- **Ground and props**: stone paving on the home plaza, the projects courtyard and in front of the contact pads, crumbling into the sand at the edges, with fallen leaves over roads and paving. Mossy organic rocks, mushrooms, petal flowers, garden lamps with warm lanterns, stone lanterns round the plaza, a signpost pointing to every area, a proper mailbox, and bevelled project props. Barrels, a crate stack and a beach ball to knock about (they sleep in the physics engine until something touches them), fireflies over the grass on Medium and High, and a floating ↵ marker above every spot you can park on.
 
 ## Tech stack and why
 
@@ -108,6 +109,9 @@ src/
     Bridge.tsx           wooden bridge over the river, with rails and colliders
     Environment.tsx      ground, roads, ramp, cones, sun
     Props.tsx            little models that float over each project pad
+    Decor.tsx            paving, fallen leaves, rocks, mushrooms, signpost, lanterns, knockables, fireflies, ↵ markers
+    stone.ts             organic rock geometry and mossy stone material
+    decorTextures.ts     paving, light pool, fallen leaf and marker textures
     common.tsx           sensors, ground text, signboards
     layout.ts            positions, roads and colour palette
   ui/                    loader, top bar, driving HUD and mini-map, cards, touch controls, classic view

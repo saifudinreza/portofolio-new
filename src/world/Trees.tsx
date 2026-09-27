@@ -2,7 +2,7 @@ import { useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { CylinderCollider, RigidBody } from '@react-three/rapier';
 import * as THREE from 'three';
-import { WORLD_SIZE, isClear, palette, pondDistance, rng } from './layout';
+import { WORLD_SIZE, distanceToSegment, isClear, palette, pondDistance, rng, trails } from './layout';
 import { actors, type Actor } from './actors';
 import { thud } from '../ui/sound';
 
@@ -67,7 +67,7 @@ function layout() {
     const x = (r() * 2 - 1) * (HALF - 3);
     const z = (r() * 2 - 1) * (HALF - 3);
     // extra room around the pond so canopies don't overhang the rim
-    if (!isClear(x, z) || pondDistance(x, z) < 1.6) continue;
+    if (!isClear(x, z) || pondDistance(x, z) < 1.6 || trails.some((seg) => distanceToSegment(x, z, seg) < 2)) continue;
     if (out.some((t) => Math.hypot(t.x - x, t.z - z) < 3.2)) continue;
     out.push({ x, z, s: 0.8 + r() * 0.7, kind: Math.floor(r() * 3), ox: 0, oz: 0, vx: 0, vz: 0, hitAt: -Infinity, leaf: new THREE.Color() });
   }

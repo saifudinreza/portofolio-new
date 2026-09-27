@@ -94,3 +94,34 @@ export function rng(seed: number) {
     return (seed - 1) / 2147483646;
   };
 }
+
+/** Footpaths through the meadows that walkers use between areas; trees are kept off them, grass is not. */
+export const trails: [number, number, number, number][] = [
+  [-12, -3, -16, 4],
+  [-16, 4, -15, 13],
+  [-15, 13, -8.7, 20],
+];
+
+export type Waypoint = { x: number; z: number; idle?: number; look?: [number, number] };
+/**
+ * NPC routes, walked there and back. Points sit on road centrelines and are shifted `side` metres to the
+ * walker's left so people keep to the verge. `sit` makes the NPC sit down at its (single) point.
+ */
+export type NpcRoute = { points: Waypoint[]; side: number; sit?: boolean; hat?: boolean };
+
+export const npcRoutes: NpcRoute[] = [
+  // home -> projects, stopping to look at the pads
+  { side: 1, points: [{ x: 3.7, z: 2.6, idle: 2 }, { x: 26, z: -6 }, { x: 26, z: -11, idle: 3, look: [26, -16] }, { x: 26, z: -23, idle: 3, look: [36, -28] }, { x: 26, z: -31, idle: 2 }] },
+  // home -> skills warehouse
+  { side: -1, points: [{ x: -3.5, z: 2, idle: 2 }, { x: -24, z: -10, idle: 3, look: [warehouse.x, warehouse.z] }] },
+  // home -> about
+  { side: 1, points: [{ x: -1.9, z: 7.5, idle: 1.5 }, { x: -12, z: 26, idle: 3, look: [aboutArea.x, aboutArea.z] }] },
+  // home -> contact, along the pads
+  { side: 1.2, points: [{ x: 1.4, z: 7.7, idle: 1.5 }, { x: 10, z: 30 }, { x: 26, z: 30, idle: 2.5, look: [26, 35] }, { x: 36, z: 30, idle: 3 }] },
+  // warehouse guard pacing in front of the doors
+  { side: 0, hat: true, points: [{ x: -29, z: -11.5, idle: 3, look: [warehouse.x, warehouse.z] }, { x: -19, z: -11.5, idle: 3, look: [warehouse.x, warehouse.z] }] },
+  // meadow footpath between the skills and about roads
+  { side: 0, points: trails.flatMap(([x1, z1], i) => [{ x: x1, z: z1, idle: i === 0 ? 2 : undefined }]).concat({ x: -8.7, z: 20, idle: 2 }) },
+  // someone enjoying the koi pond
+  { side: 0, sit: true, points: [{ x: -7.1, z: 30.1, look: [pond.x, pond.z] }] },
+];

@@ -418,7 +418,8 @@ export function Pond() {
         const dz = f.z - a.z;
         const d = Math.hypot(dx, dz);
         const range = 4 + Math.min(a.speed, 10) * 0.2;
-        if (d > range || d < 1e-4) continue;
+        // someone sitting still on the bank is ignored; only movement scares the koi
+        if (d > range || d < 1e-4 || a.speed < 0.3) continue;
         const k = 1 - d / range;
         sx += (dx / d) * k * 6;
         sz += (dz / d) * k * 6;

@@ -15,7 +15,7 @@ An interactive portfolio where you drive a little jeep around an island to explo
 ## What's in the world
 
 - **Home**: big extruded `REZA` letters. Each letter is a physics body, so you can knock them over.
-- **Projects**: one pad per project (KasirAI, KostKu, TrustPay, Loka Living, ZFlux, RentWheels). Park on a pad and a card opens with highlights, stack and live links. Press `Enter` to open the live app.
+- **Projects**: one pad per project (KasirAI, KostKu, TrustPay, Loka Living, RentWheels, AgentMon). Park on a pad and a card opens with highlights, stack and live links. Press `Enter` to open the live app.
 - **Skills (the warehouse)**: a stack of knockable crates labelled with my stack, a nod to my day job as a warehouse operator.
 - **About**: education, certifications and work experience.
 - **Contact**: GitHub, LinkedIn and email pads.

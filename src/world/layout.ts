@@ -48,6 +48,15 @@ export const palette = {
   sky: '#F6D9A8',
 };
 
+/** Jeep paint colours. The default `navy` is lighter than the UI navy so the body reads from the top-down camera. */
+export const CAR_SKINS = {
+  navy: { paint: '#2F5A9E' },
+  coral: { paint: '#E8664A' },
+  sand: { paint: '#D9B26F' },
+  teal: { paint: '#2BA89A' },
+} as const;
+export type CarSkin = keyof typeof CAR_SKINS;
+
 export const letterColors = [palette.navy, palette.teal, palette.coral, palette.yellow];
 
 /** Dirt roads from the centre to each area: [x1, z1, x2, z2]. Trees are kept off these. */

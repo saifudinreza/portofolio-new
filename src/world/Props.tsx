@@ -111,17 +111,15 @@ function Sofa({ color }: { color: string }) {
   );
 }
 
-function Bag({ color }: { color: string }) {
+/** A phone showing three review rows coloured by risk: safe, caution, danger. */
+function Phone() {
   return (
     <>
-      <RoundedBox args={[0.9, 1, 0.5]} radius={0.05} smoothness={2} castShadow><M color={color} rough={0.85} /></RoundedBox>
-      {/* folded top edge */}
-      <RoundedBox args={[0.92, 0.1, 0.52]} radius={0.03} smoothness={2} position={[0, 0.46, 0]}><M color={palette.cream} rough={0.85} /></RoundedBox>
-      {[-0.13, 0.13].map((z) => (
-        <mesh key={z} position={[0, 0.62, z]}><torusGeometry args={[0.2, 0.025, 8, 20, Math.PI]} /><M color={palette.dark} /></mesh>
+      <RoundedBox args={[0.62, 1.1, 0.1]} radius={0.08} smoothness={3} castShadow><M color={palette.dark} rough={0.4} /></RoundedBox>
+      <RoundedBox args={[0.5, 0.94, 0.02]} radius={0.04} smoothness={2} position={[0, 0, 0.055]}><M color={palette.cream} rough={0.5} /></RoundedBox>
+      {[palette.teal, palette.yellow, palette.coral].map((c, i) => (
+        <RoundedBox key={c} args={[0.38, 0.17, 0.02]} radius={0.04} smoothness={2} position={[0, 0.27 - i * 0.28, 0.075]}><M color={c} emissive={c} rough={0.6} /></RoundedBox>
       ))}
-      {/* price tag on a string */}
-      <RoundedBox args={[0.16, 0.22, 0.02]} radius={0.02} smoothness={2} position={[0.48, 0.2, 0.2]} rotation={[0, 0, 0.3]}><M color={palette.yellow} /></RoundedBox>
     </>
   );
 }
@@ -155,8 +153,8 @@ export function ProjectProp({ kind, color }: { kind: Project['prop']; color: str
       {kind === 'house' && <House color={color} />}
       {kind === 'coins' && <Coins color={color} />}
       {kind === 'sofa' && <Sofa color={color} />}
-      {kind === 'bag' && <Bag color={color} />}
       {kind === 'key' && <Key color={color} />}
+      {kind === 'phone' && <Phone />}
     </group>
   );
 }

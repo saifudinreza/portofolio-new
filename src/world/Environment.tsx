@@ -77,9 +77,9 @@ varying vec2 vMeadowUv;
 uniform sampler2D uMeadow;`)
     .replace('#include <map_fragment>', `#include <map_fragment>
 float meadow = texture2D(uMeadow, vMeadowUv).r;
-// olive soil, keeping the sand texture's light and dark variation
+// dark turf under the grass (so any gap between tufts reads as shade, not bare sand), keeping the sand texture's variation
 float shade = dot(diffuseColor.rgb, vec3(0.33));
-diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.17, 0.25, 0.07) * (0.6 + 0.8 * shade), meadow * 0.95);`);
+diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.12, 0.2, 0.06) * (0.6 + 0.6 * shade), meadow);`);
 }
 
 export function Ground() {

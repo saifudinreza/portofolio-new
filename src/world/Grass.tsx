@@ -17,6 +17,12 @@ const TUFTS_COARSE = scaled(8500, 0.5);
 const GRASS_DENSITY: Record<Tier, number> = { low: 0.4, medium: 0.75, high: 1 };
 /** Low also trims the blades a little: fewer grass pixels to shade, which is what low-end GPUs struggle with. */
 const GRASS_HEIGHT: Record<Tier, number> = { low: 0.62, medium: 0.9, high: 1 };
+/** Fewer tufts on lower tiers: each one fans out wider instead, so the lawn still covers the ground. */
+const GRASS_SPREAD: Record<Tier, number> = { low: 1.5, medium: 1.2, high: 1 };
+/** Tufts are wider than they were, so the jittered grid below (one tuft per cell) leaves no bare patch between them. */
+const TUFT_SPREAD = 1.6;
+/** Spacing of the jittered grid the meadow is planted on, metres. */
+const CELL = 0.55;
 const TRAIL_SECONDS = 2.2;
 const TRAIL_SPACING = 0.9;
 const textClear: [number, number, number][] = [
@@ -36,13 +42,13 @@ function tuftGeometry() {
   const idx: number[] = [];
   for (let i = 0; i < BLADES_PER_TUFT; i++) {
     const a = (i / BLADES_PER_TUFT) * Math.PI * 2 + (r() - 0.5) * 0.7;
-    const rho = i === 0 ? 0.02 : 0.05 + r() * 0.09;
+    const rho = (i === 0 ? 0.02 : 0.05 + r() * 0.09) * TUFT_SPREAD;
     const cx = Math.cos(a) * rho;
     const cz = Math.sin(a) * rho;
     const face = a + Math.PI / 2 + (r() - 0.5) * 0.9; // width axis, roughly across the outward direction
     const wx = Math.cos(face);
     const wz = Math.sin(face);
-    const width = 0.075 + r() * 0.035; // half-width at the root, metres
+    const width = (0.075 + r() * 0.035) * 1.15; // half-width at the root, metres
     const hf = i === 0 ? 1.15 : 0.72 + r() * 0.38;
     const tint = (r() - 0.5) * 0.24;
     const lean = 0.06 + r() * 0.1;
@@ -76,7 +82,8 @@ function scatter(target: number) {
   const blades = new Float32Array(target * 4);
   const tints = new Float32Array(target);
   let n = 0;
-  let guard = 0;
+  /** Patches of fresh, deep and dry grass drift slowly across the island instead of changing tuft by tuft. */
+  const patchTint = (x: number, z: number) => 0.5 + 0.5 * Math.sin(x * 0.11 + Math.sin(z * 0.13) * 1.7) * Math.cos(z * 0.09 - x * 0.05) + (r() - 0.5) * 0.25;
   const add = (x: number, z: number, height: number, tint: number) => {
     blades.set([x, z, r() * Math.PI * 2, height], n * 4);
     tints[n] = THREE.MathUtils.clamp(tint + (r() - 0.5) * 0.3, 0, 1);
@@ -105,25 +112,29 @@ function scatter(target: number) {
     }
   }
 
-  while (n < target && guard++ < target * 4) {
-    const cx = (r() * 2 - 1) * (HALF - 1);
-    const cz = (r() * 2 - 1) * (HALF - 1);
-    // low-frequency field makes meadows and thinner patches instead of an even carpet
-    const field = meadowField(cx, cz);
-    if (r() > field) continue;
-    const tuft = 2 + Math.floor(r() * 3);
-    const tint = r();
-    for (let k = 0; k < tuft && n < target; k++) {
-      const x = cx + (r() - 0.5) * 0.95;
-      const z = cz + (r() - 0.5) * 0.95;
-      if (!isClear(x, z, 2.3) || textClear.some(([tx, tz, tr]) => Math.hypot(x - tx, z - tz) < tr)) continue;
-      // the edge of the road thins out: sparser and shorter next to the dirt, full meadow further away
-      const rd = roadDistance(x, z);
-      if (rd < 3.6 && r() > (rd - 2.3) / 1.3) continue;
-      // taller in lush patches and in open meadow away from the roads
-      const open = Math.min(1, Math.max(0, (rd - 3) / 8));
-      add(x, z, 0.32 + r() * 0.42 * (0.6 + field * 0.6) + open * 0.18, tint);
-    }
+  // Plant the meadow on a jittered grid (one tuft per cell, wobbled inside it) instead of dropping tufts at random:
+  // random scatter always leaves bare holes next to piles, and the sand shows through the holes. The cells are then
+  // shuffled, because the density setting draws only the first N tufts and that must thin the lawn evenly.
+  const cells: [number, number][] = [];
+  for (let gx = -HALF + 0.5; gx < HALF - 0.5; gx += CELL) for (let gz = -HALF + 0.5; gz < HALF - 0.5; gz += CELL) cells.push([gx, gz]);
+  for (let i = cells.length - 1; i > 0; i--) {
+    const j = Math.floor(r() * (i + 1));
+    [cells[i], cells[j]] = [cells[j], cells[i]];
+  }
+  for (const [gx, gz] of cells) {
+    if (n >= target) break;
+    const x = gx + r() * CELL;
+    const z = gz + r() * CELL;
+    if (!isClear(x, z, 2.3) || textClear.some(([tx, tz, tr]) => Math.hypot(x - tx, z - tz) < tr)) continue;
+    // low-frequency field: lusher, taller patches and slightly thinner ones, but never bare
+    const field = meadowField(x, z);
+    if (r() > 0.82 + 0.18 * field) continue;
+    // the edge of the road thins out: sparser and shorter next to the dirt, full meadow further away
+    const rd = roadDistance(x, z);
+    if (rd < 3.6 && r() > (rd - 2.3) / 1.3) continue;
+    // taller in lush patches and in open meadow away from the roads
+    const open = Math.min(1, Math.max(0, (rd - 3) / 8));
+    add(x, z, 0.32 + r() * 0.5 * (0.6 + field * 0.6) + open * 0.18, patchTint(x, z));
   }
   return { blades: blades.subarray(0, n * 4), tints: tints.subarray(0, n), count: n };
 }
@@ -131,6 +142,7 @@ function scatter(target: number) {
 const vertexHead = /* glsl */ `
 uniform float uTime;
 uniform float uHeight;
+uniform float uSpread;
 uniform vec2 uWindDir;
 uniform float uWindStrength;
 uniform vec4 uStamps[${MAX_STAMPS}];
@@ -146,7 +158,7 @@ float h = position.y;
 vec2 root = aBlade.xy;
 float height = aBlade.w * uHeight * aShape.x;
 vec2 rot = vec2(cos(aBlade.z), sin(aBlade.z));
-vec2 offset = vec2(rot.x * position.x - rot.y * position.z, rot.y * position.x + rot.x * position.z);
+vec2 offset = vec2(rot.x * position.x - rot.y * position.z, rot.y * position.x + rot.x * position.z) * uSpread;
 
 vec2 windDir = uWindDir;
 float gust = sin(uTime * 0.9 - dot(root, windDir) * 0.22) * 0.5 + 0.5;
@@ -209,6 +221,7 @@ export function Grass() {
     const uniforms = {
       uTime: { value: 0 },
       uHeight: { value: 1 },
+      uSpread: { value: 1 },
       ...windUniforms,
       uStamps: { value: Array.from({ length: MAX_STAMPS }, () => new THREE.Vector4()) },
     };
@@ -228,6 +241,7 @@ export function Grass() {
   useEffect(() => {
     geometry.instanceCount = Math.round(count * GRASS_DENSITY[tier]);
     uniforms.uHeight.value = GRASS_HEIGHT[tier];
+    uniforms.uSpread.value = GRASS_SPREAD[tier];
   }, [geometry, count, tier, uniforms]);
 
   useFrame(({ clock }) => {

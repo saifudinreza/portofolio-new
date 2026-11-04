@@ -97,7 +97,7 @@ export function TopBar() {
       <nav className="teleports" aria-label="Jump to area">
         {(Object.keys(zones) as ZoneId[]).map((z) => (
           // Drop focus so Space/Enter while driving can't re-trigger the teleport.
-          <button key={z} onClick={(e) => { e.currentTarget.blur(); teleportTo(z); }}>{zones[z].label}</button>
+          <button key={z} onClick={(e) => { e.currentTarget.blur(); teleportTo(z); }}>{zones[z].short ? (<><span className="zone-long">{zones[z].label}</span><span className="zone-short">{zones[z].short}</span></>) : zones[z].label}</button>
         ))}
       </nav>
       <div className="sound compact"><MuteButton /></div>

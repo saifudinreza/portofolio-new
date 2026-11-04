@@ -12,12 +12,14 @@ export const AREA_RATIO = (WORLD_SIZE / OLD_WORLD_SIZE) ** 2;
  */
 export const scaled = (n: number, share = 1) => Math.round(n * (1 + (AREA_RATIO - 1) * share));
 
-export type ZoneId = 'home' | 'projects' | 'skills' | 'about' | 'contact';
+export type ZoneId = 'home' | 'projects' | 'skills' | 'experience' | 'about' | 'contact';
 
-export const zones: Record<ZoneId, { label: string; spawn: [number, number]; yaw: number }> = {
+export const zones: Record<ZoneId, { label: string; /** a shorter name for the narrow top bar */ short?: string; spawn: [number, number]; yaw: number }> = {
   home: { label: 'Home', spawn: [0, 6], yaw: Math.PI },
   projects: { label: 'Projects', spawn: [26, -3], yaw: Math.PI },
   skills: { label: 'Skills', spawn: [-24, -7], yaw: Math.PI },
+  // at the end of the west road; the spawn is on the road and faces the area
+  experience: { label: 'Experience', short: 'Work', spawn: [-46, -6.8], yaw: -Math.PI / 2 },
   about: { label: 'About', spawn: [-12, 26], yaw: -Math.PI / 2 },
   contact: { label: 'Contact', spawn: [10, 30], yaw: Math.PI / 2 },
 };
@@ -43,6 +45,8 @@ export const projectPadPositions: [number, number][] = [
 ];
 
 export const warehouse = { x: -24, z: -20 };
+/** The Experience area: its pad, at the end of the west road. */
+export const experienceArea = { x: -58, z: -6 };
 export const aboutArea = { x: -22, z: 26 };
 export const contactPads: [number, number][] = [[18, 30], [26, 30], [34, 30]];
 /**
@@ -100,6 +104,7 @@ export const roadSegments: [number, number, number, number][] = [
   [36, 30, 58, 48], // south-east from the contact pads
   [26, -32, 44, -56], // north-east, past the end of the projects spine
   [-24, -10, -52, -6], // west of the skills warehouse
+  [-52, -6, -55.5, -6], // the last stretch into the Experience area
 ];
 
 /** A point `t` (0..1) of the way along road `i`, plus the road's heading there: [x, z, yaw]. */
@@ -137,6 +142,7 @@ const keepClear: [number, number, number][] = [
   [26, -20, 17], // projects
   [warehouse.x, warehouse.z, 10],
   [aboutArea.x, aboutArea.z, 9],
+  [experienceArea.x + 3, experienceArea.z, 13], // pad, milestone boards, crates and the way in
   [26, 29, 13], // contact
   [-8, 10, 5], // ramp
   [9, 16, 5], // cones

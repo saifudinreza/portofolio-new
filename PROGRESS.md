@@ -34,7 +34,7 @@
 | 2 — Visual overhaul | ISSUE-001 to 003 (2a-2d) | IN PROGRESS: 2a-2c done; 2d PR open | #33 (2a), #34 (2b), #35 (2c), #36 (2d) |
 | 3 — Performance | ISSUE-017, 018, 016 | IN PROGRESS: leak audit done, FPS pengukuran menunggu pemilik | #37 |
 | 4 — Driving | ISSUE-004 to 007 | DONE kecuali playtest manusia | #38 |
-| 5 — Portfolio | ISSUE-008 to 009 | TODO | #39 |
+| 5 — Portfolio | ISSUE-008 to 009 | DONE kecuali thumbnail proyek | #39 |
 | 6 — Exploration | ISSUE-010 to 013 | TODO | #40 |
 | 7 — Device testing | ISSUE-019, 020 | TODO | #41 |
 
@@ -162,6 +162,13 @@ _Add reproducible bugs, blockers, and relevant browser/device details here._
 - **Kebocoran kecil yang tersisa:** +1 tekstur GPU (kecil) setiap kali tier naik dari Low ke Medium (tidak terjadi Medium ↔ High). Bukan `scene.environment` (sudah dicoba dibuang, tidak berpengaruh); kemungkinan di dalam drei `Environment`. Diabaikan: auto-quality hanya flip-flop maksimum 4 kali lalu berhenti.
 - **Pemecahan chunk dicoba dan dibatalkan:** `manualChunks` (three / r3f / rapier) membuat `index.html` memuat `physics-wasm` (842 kB gzip) dan `r3f` (479 kB gzip) lebih dulu lewat modulepreload, merusak pemuatan malas (halaman awal tidak boleh mengunduh 3D). Rapier + WASM base64 ternyata bagian terbesar chunk Scene (±2,2 MB dari 3,5 MB). Ukuran total gzip tidak berubah, jadi tidak dipakai.
 - **Menunggu pemilik:** FPS di GPU asli (Low/Medium/High di Home, Projects, sungai; desktop dan HP) lewat `?stats`, lalu optimasi yang terbukti (instancing zona, bayangan benda kecil).
+
+### 2026-11-04 (M5 / #39)
+- **Keputusan:** Experience jadi zona sendiri (bukan papan di About), karena area About sedang dibangun ulang di issue lain. Lokasi: ujung barat jalan baru, pad di (-58, -6), spawn (-46, -6,8) di jalan menghadap area; ruang di sekitarnya dikosongkan lewat `keepClear`, jalan sambungan ditambahkan di akhir `roadSegments` (indeks gerbang circuit tidak berubah).
+- `world/ExperienceArea.tsx` (baru): pad koral dengan koper melayang, papan besar "EXPERIENCE", dua papan milestone (satu per pekerjaan dari `profile.experience`, menghadap selatan seperti semua papan lain), tumpukan peti. Kartu Experience di `SpotCard`; kartu About tidak lagi memuat daftar kerja (menunjuk ke Experience).
+- Terhubung: tombol top bar (nama pendek "Work" di layar sempit), Big map dan teleport, minimap (titik dan label WORK), marker ↵, achievement "Grand tour" kini 6 area (jumlah dari `zones`), kartu di Classic sudah punya Experience.
+- **E sama dengan Enter** untuk membuka tautan spot (Menu Controls, README, petunjuk di kartu diperbarui); Y di gamepad tetap. Petunjuk "Press E or Enter" sudah muncul begitu mobil masuk sensor (tidak perlu parkir penuh).
+- Diuji: mobil menyetir dari spawn ke pad, kartu Experience terbuka; top bar 390 px muat; tsc, lint, build lolos. Thumbnail proyek: menunggu gambar dari pemilik.
 
 ### 2026-11-04 (M4 / #38)
 - **Bug "mobil bergerak sendiri":** pelatuk gamepad (`value(7) - value(6)`) tanpa dead zone membuat throttle tidak nol saat nilai istirahat 0,04: rem parkir tidak aktif dan tidak ada hambatan gelinding, jadi mobil merayap lalu terus berakselerasi. Perbaikan di `store.ts`: dead zone pelatuk 0,1; throttle di bawah 0,1 dan steer di bawah 0,05 dianggap 0. Diuji headless dengan gamepad palsu: pelatuk 0,05 dan stick 0,1 membuat mobil diam 12 dtk (0,00 m, parked); pelatuk penuh tetap menjalankan mobil.

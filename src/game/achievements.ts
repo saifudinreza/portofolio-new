@@ -1,6 +1,6 @@
 import { create } from 'zustand';
 import { projects } from '../data/profile';
-import type { CarSkin } from '../world/layout';
+import { zones, type CarSkin } from '../world/layout';
 
 // Achievements live in their own small store (not the main one) so the game code can report events from
 // anywhere without an import cycle. Everything is saved in localStorage; storage can be blocked, so it never throws.
@@ -19,7 +19,7 @@ export type Achievement = {
   goal?: number;
 };
 
-export const ZONE_COUNT = 5;
+export const ZONE_COUNT = Object.keys(zones).length;
 export const JUMP_GOAL = 25;
 export const HONK_GOAL = 20;
 /** Boost top speed is 19 m/s; the car needs a moment of full boost on flat ground to get this close. */
@@ -32,7 +32,7 @@ export const CIRCUIT_FAST_SECONDS = 18;
 
 export const ACHIEVEMENTS: Achievement[] = [
   { id: 'all-projects', title: 'Window shopper', description: 'Park on every project pad.', goal: projects.length },
-  { id: 'all-zones', title: 'Grand tour', description: 'Visit all five areas: Home, Projects, Skills, About and Contact.', goal: ZONE_COUNT },
+  { id: 'all-zones', title: 'Grand tour', description: 'Visit every area: Home, Projects, Skills, Experience, About and Contact.', goal: ZONE_COUNT },
   { id: 'open-live', title: 'Click-through', description: 'Open the live site of a project.' },
   { id: 'airtime', title: 'Airtime', description: 'Stay in the air for more than a second.' },
   { id: 'jumper', title: 'Bunny hop', description: `Jump ${JUMP_GOAL} times.`, goal: JUMP_GOAL },

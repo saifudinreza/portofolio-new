@@ -7,6 +7,7 @@ export type Spot =
   | { kind: 'project'; id: string }
   | { kind: 'skills' }
   | { kind: 'about' }
+  | { kind: 'experience' }
   | { kind: 'contact'; id: 'github' | 'linkedin' | 'email' };
 
 export type MenuTab = 'options' | 'controls' | 'achievements' | 'about-site';

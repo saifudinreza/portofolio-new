@@ -258,7 +258,7 @@ export function meadowMask() {
       if (isClear(x, z, 2.3)) {
         const road = Math.min(...roadSegments.map((seg) => distanceToSegment(x, z, seg)));
         const edge = Math.min(1, Math.max(0, (road - 2.3) / 2.4)); // fades out towards the road
-        v = Math.min(1, 0.65 + meadowField(x, z) * 0.35) * edge;
+        v = (0.9 + meadowField(x, z) * 0.1) * edge; // nearly solid: the grass planted on it should never show sand between tufts
       }
       const o = (j * n + i) * 4;
       data[o] = data[o + 1] = data[o + 2] = Math.round(v * 255);

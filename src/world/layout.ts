@@ -264,14 +264,24 @@ function findBridge() {
     yaw: Math.atan2(x2 - x1, z2 - z1),
     dirX: (x2 - x1) / len,
     dirZ: (z2 - z1) / len,
-    /** flat deck reaches this far each way from the centre, then a ramp of `ramp` metres down to the ground */
+    /** the arched deck reaches this far each way from the centre, then a ramp of `ramp` metres down to the ground */
     deckHalf: 4.2,
     ramp: 2.6,
     halfWidth: 1.7,
+    /** deck height at both ends of the arch (where the ramps start) */
     height: 0.55,
+    /** how much higher the deck is in the middle than at its ends: a gentle hump over the arch */
+    hump: 0.22,
   };
 }
 export const bridge = findBridge();
+
+/** Deck height `along` metres from the bridge centre (either way): a parabolic hump, then a straight ramp down to the ground. */
+export function bridgeDeckHeight(along: number) {
+  const a = Math.abs(along);
+  if (a <= bridge.deckHalf) return bridge.height + bridge.hump * (1 - (a / bridge.deckHalf) ** 2);
+  return Math.max(0, bridge.height * (1 - (a - bridge.deckHalf) / bridge.ramp));
+}
 
 /** Height of whatever you stand on at (x, z): the bridge deck and ramps, otherwise the ground (0). */
 export function groundHeight(x: number, z: number) {
@@ -280,8 +290,7 @@ export function groundHeight(x: number, z: number) {
   const along = Math.abs(dx * bridge.dirX + dz * bridge.dirZ);
   const side = Math.abs(dx * bridge.dirZ - dz * bridge.dirX);
   if (side > bridge.halfWidth || along > bridge.deckHalf + bridge.ramp) return 0;
-  if (along <= bridge.deckHalf) return bridge.height;
-  return bridge.height * (1 - (along - bridge.deckHalf) / bridge.ramp);
+  return bridgeDeckHeight(along);
 }
 
 /** In the river's water and not up on the bridge. */

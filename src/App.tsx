@@ -65,9 +65,14 @@ export default function App() {
       if (DRIVE_KEYS.includes(e.code)) e.preventDefault();
       // Cmd/Ctrl/Alt combos are browser or OS shortcuts, not driving. On macOS the letter
       // in a Cmd combo never fires keyup, so adding it would leave the car driving itself.
+      // Left Ctrl is the brake: let its own keydown through, it is the one key that arrives with ctrlKey set.
+      if (e.code === 'ControlLeft') {
+        input.keys.add(e.code);
+        return;
+      }
       if (e.metaKey || e.ctrlKey || e.altKey) return;
       if (e.code === 'KeyR') input.resetRequested = true;
-      if (e.code === 'KeyM' && !e.repeat) useStore.getState().setMuted(!useStore.getState().muted);
+      if (e.code === 'KeyL' && !e.repeat) useStore.getState().setMuted(!useStore.getState().muted);
       if (e.code === 'Enter' && useStore.getState().started) {
         const href = primaryLink(useStore.getState().spot);
         if (href) window.open(href, '_blank', 'noopener');

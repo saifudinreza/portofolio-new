@@ -134,11 +134,11 @@ export const useStore = create<State>((set, get) => ({
  * Driving input. Kept outside React state on purpose: it is read every frame
  * by the car and written by keyboard + touch handlers, so it must not re-render.
  */
-export type TouchButton = 'left' | 'right' | 'gas' | 'reverse' | 'horn' | 'boost';
+export type TouchButton = 'left' | 'right' | 'gas' | 'reverse' | 'horn' | 'boost' | 'jump';
 
 export const input = {
   // Each pedal keeps its own state so releasing one never cancels another that is still held.
-  touch: { left: false, right: false, gas: false, reverse: false, horn: false, boost: false } as Record<TouchButton, boolean>,
+  touch: { left: false, right: false, gas: false, reverse: false, horn: false, boost: false, jump: false } as Record<TouchButton, boolean>,
   /** Virtual joystick, −1..1 each way: x right, y forward. Zero when released. */
   joy: { x: 0, y: 0 },
   keys: new Set<string>(),
@@ -165,7 +165,9 @@ export function readDriveInput() {
   return {
     throttle: Math.max(-1, Math.min(1, throttle)),
     steer: Math.max(-1, Math.min(1, steer)),
-    brake: k.has('Space'),
+    brake: k.has('KeyB') || k.has('ControlLeft'),
+    // held, not tapped: the car decides on the press edge so holding Space never bunny-hops
+    jump: k.has('Space') || t.jump,
     boost: k.has('ShiftLeft') || k.has('ShiftRight') || t.boost,
     // held, not tapped: the horn sounds for as long as H (or the touch button) is down
     horn: k.has('KeyH') || t.horn,

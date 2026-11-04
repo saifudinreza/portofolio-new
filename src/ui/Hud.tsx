@@ -9,11 +9,11 @@ const TIPS = [
   'W A S D or the arrow keys to drive, Shift to boost',
   'Park on a glowing pad to open a project',
   'Knock over the REZA letters and the skill crates',
-  'Hold H for the horn, M to mute',
+  'Space to jump, B to brake, hold H for the horn, L to mute',
   'Scroll to zoom the camera in and out',
   'Short on time? Classic view has everything on one page',
 ];
-const TOUCH_TIPS = ['Use the joystick to steer and drive', 'Park on a glowing pad to open a project', 'Tap the bolt to boost'];
+const TOUCH_TIPS = ['Use the joystick to steer and drive', 'Park on a glowing pad to open a project', 'Tap the bolt to boost, the arrow to jump'];
 
 export function Loader() {
   const progress = useStore((s) => s.loadProgress);
@@ -136,7 +136,7 @@ function SoundControl() {
         className="sound-toggle"
         aria-label={silent ? 'Unmute sound' : 'Mute sound'}
         aria-pressed={silent}
-        title={silent ? 'Unmute (M)' : 'Mute (M)'}
+        title={silent ? 'Unmute (L)' : 'Mute (L)'}
         onClick={(e) => {
           e.currentTarget.blur();
           if (volume === 0) setVolume(0.7);
@@ -174,9 +174,10 @@ export function KeyHints() {
     <div className="keyhints" aria-hidden>
       <span><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> drive</span>
       <span><kbd>Shift</kbd> boost</span>
-      <span><kbd>Space</kbd> brake</span>
+      <span><kbd>Space</kbd> jump</span>
+      <span><kbd>B</kbd> brake</span>
       <span><kbd>H</kbd> hold horn</span>
-      <span><kbd>M</kbd> mute</span>
+      <span><kbd>L</kbd> mute</span>
       <span><kbd>R</kbd> reset</span>
       <span>scroll to zoom</span>
     </div>
@@ -268,6 +269,9 @@ const HornIcon = () => (
 const BoostIcon = () => (
   <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden><path d="M13 2 4 14h6l-1 8 9-12h-6z" fill="currentColor" /></svg>
 );
+const JumpIcon = () => (
+  <svg viewBox="0 0 24 24" width="24" height="24" aria-hidden><path d="M12 4 5 12h4.5v8h5v-8H19z" fill="currentColor" /></svg>
+);
 
 /** On-screen controls for phones and tablets: a joystick (default) or arrow buttons, plus boost and horn. */
 export function TouchControls() {
@@ -305,6 +309,7 @@ export function TouchControls() {
       </button>
       <div className="pad-group right">
         <div className="pad-extras">
+          <button aria-label="Jump" className="round jump" {...hold('jump')}><JumpIcon /></button>
           <button aria-label="Horn" className="round horn" {...hold('horn')}><HornIcon /></button>
           <button aria-label="Boost" className="round boost" {...hold('boost')}><BoostIcon /></button>
         </div>

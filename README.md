@@ -23,7 +23,7 @@ An interactive portfolio where you drive a little jeep around an island to explo
 - A jump ramp and a cone slalom, just for fun.
 - **Classic view**: the whole portfolio as a normal scrollable page, for recruiters in a hurry and for devices without WebGL.
 
-Controls: `W A S D` or arrow keys to drive, `Shift` boost, `Space` brake, hold `H` for the horn, `M` mute, `R` reset, scroll to zoom. On phones and tablets a thumb joystick (or arrow buttons, switchable) drives the car, with boost and horn buttons, and the phone buzzes on crashes. The top bar jumps straight to any area and holds the graphics and sound settings. A speedometer with a boost light and a mini-map (areas, pond, people, the car) sit in the corner while you drive.
+Controls: `W A S D` or arrow keys to drive, `Shift` boost, `Space` jump, `B` or left `Ctrl` brake, hold `H` for the horn, `L` mute, `R` reset, scroll to zoom. On phones and tablets a thumb joystick (or arrow buttons, switchable) drives the car, with jump, boost and horn buttons, and the phone buzzes on crashes. The top bar jumps straight to any area and holds the graphics and sound settings. A speedometer with a boost light and a mini-map (areas, pond, people, the car) sit in the corner while you drive.
 
 ## Graphics and performance
 

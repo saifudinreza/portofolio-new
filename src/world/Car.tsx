@@ -21,6 +21,7 @@ const GRIP = 10;
 const RIDE_HEIGHT = 0.4; // distance from body centre to the bottom of the wheels
 const ROLLING_RESISTANCE = 2; // constant deceleration when coasting, m/s²
 const PARK_SPEED = 0.3; // below this with no throttle the parking brake holds the car
+const JUMP_SPEED = 7.5; // upward speed of a jump; with gravity 25 that is about 1.1 m high
 const CAR_GRASS_RADIUS = 1.8;
 const WATER_SPEED = 0.45; // top speed multiplier while wading through the pond or the river
 const WATER_DRAG = 1.5;
@@ -48,6 +49,8 @@ export function Car() {
   const lookAt = useRef(new THREE.Vector3());
   const tilt = useRef({ pitch: 0, roll: 0 });
   const parked = useRef(false);
+  // Jump fires on the press, not while held. Starts true so the Space that closed the loader doesn't jump.
+  const jumpHeld = useRef(true);
   const actor = useRef<Actor>({ x: 0, z: 0, radius: 0 });
   const { rapier, world } = useRapier();
   const camera = useThree((s) => s.camera);
@@ -160,7 +163,20 @@ export function Car() {
       return;
     }
 
-    const drive = started ? readDriveInput() : { throttle: 0, steer: 0, brake: false, boost: false, horn: false };
+    const drive = started ? readDriveInput() : { throttle: 0, steer: 0, brake: false, jump: false, boost: false, horn: false };
+    if (!started) jumpHeld.current = true;
+    let jumped = false;
+    if (drive.jump && !jumpHeld.current && grounded) {
+      // Free the parking brake first, then set the vertical speed directly: an impulse would depend on the mass.
+      if (parked.current) {
+        parked.current = carState.parked = false;
+        rb.setEnabledTranslations(true, true, true, true);
+      }
+      rb.setLinvel({ x: vel.x, y: JUMP_SPEED, z: vel.z }, true);
+      carState.jumps++;
+      jumped = true;
+    }
+    jumpHeld.current = drive.jump;
     carState.throttle = drive.throttle;
     carState.brake = drive.brake;
     carState.boost = drive.boost && drive.throttle > 0;
@@ -169,7 +185,8 @@ export function Car() {
 
     // Parking brake: with no throttle and almost no speed on the ground, pin the car in x/z so it
     // cannot creep down the ramp or keep sliding after a bump. Any throttle or leaving the ground frees it.
-    const shouldPark = grounded && drive.throttle === 0 && Math.hypot(vel.x, vel.z) < PARK_SPEED;
+    // (not on the frame of a jump: the park branch below would write the old vertical speed back)
+    const shouldPark = !jumped && grounded && drive.throttle === 0 && Math.hypot(vel.x, vel.z) < PARK_SPEED;
     if (shouldPark !== parked.current) {
       parked.current = carState.parked = shouldPark;
       rb.setEnabledTranslations(!shouldPark, true, !shouldPark, true);

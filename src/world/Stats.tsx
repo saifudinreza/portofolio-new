@@ -3,7 +3,7 @@ import { useFrame, useThree } from '@react-three/fiber';
 import * as THREE from 'three';
 
 type Part = { name: string; meshes: number; triangles: number };
-export type FrameStats = { fps: number; calls: number; triangles: number; programs: number; parts: Part[] };
+export type FrameStats = { fps: number; calls: number; triangles: number; programs: number; geometries: number; textures: number; parts: Part[] };
 
 /** Triangles a mesh draws, instances included (InstancedMesh.count or an instanced geometry's instanceCount). */
 function trianglesOf(m: THREE.Mesh) {
@@ -67,10 +67,11 @@ export function Stats() {
     a.time += dt;
     a.frames++;
     if (a.time < 1) return;
-    const stats: FrameStats = { fps: a.frames / a.time, calls: a.calls, triangles: a.triangles, programs: gl.info.programs?.length ?? 0, parts: breakdown(scene) };
+    const stats: FrameStats = { fps: a.frames / a.time, calls: a.calls, triangles: a.triangles, programs: gl.info.programs?.length ?? 0, geometries: gl.info.memory.geometries, textures: gl.info.memory.textures, parts: breakdown(scene) };
     (window as unknown as { __stats: FrameStats }).__stats = stats;
     el.textContent =
       `${stats.fps.toFixed(0)} fps · ${stats.calls} draw calls · ${k(stats.triangles)} tris · ${stats.programs} shaders\n` +
+      `${stats.geometries} geometries · ${stats.textures} textures in GPU memory\n` +
       stats.parts.map((p) => `${p.name.padEnd(22)} ${String(p.meshes).padStart(4)} meshes  ${k(p.triangles).padStart(6)} tris`).join('\n');
     a.time = 0;
     a.frames = 0;

@@ -32,7 +32,7 @@
 | 0 — Audit | ISSUE-000 | IN PROGRESS | — |
 | 1 — Stability | ISSUE-014, 020 | IN PROGRESS (PR open) | #32 |
 | 2 — Visual overhaul | ISSUE-001 to 003 (2a-2d) | IN PROGRESS: 2a-2c done; 2d PR open | #33 (2a), #34 (2b), #35 (2c), #36 (2d) |
-| 3 — Performance | ISSUE-017, 018, 016 | TODO | #37 |
+| 3 — Performance | ISSUE-017, 018, 016 | IN PROGRESS: leak audit done, FPS pengukuran menunggu pemilik | #37 |
 | 4 — Driving | ISSUE-004 to 007 | TODO | #38 |
 | 5 — Portfolio | ISSUE-008 to 009 | TODO | #39 |
 | 6 — Exploration | ISSUE-010 to 013 | TODO | #40 |
@@ -152,6 +152,13 @@ _Add reproducible bugs, blockers, and relevant browser/device details here._
 - Created this progress tracker.
 - Next action: perform ISSUE-000 (codebase audit).
 - No implementation status has been assumed or marked complete.
+
+### 2026-11-04 (M3 / #37, bagian tanpa GPU)
+- **Audit listener:** 18 `addEventListener` vs 13 `removeEventListener`; 5 sisanya disengaja (listener singleton di `sound.ts` dan elemen audio hidup selama halaman; listener canvas di `Scene.tsx` ikut hilang dengan elemennya). Tidak ada kebocoran listener.
+- **Kebocoran nyata ditemukan dan diperbaiki:** `Fireflies` (dipasang/dilepas saat tier berpindah Low ↔ Medium/High) membuat geometri dan material yang tidak pernah dibuang. Diukur lewat overlay `?stats` (sekarang menampilkan jumlah geometri dan tekstur GPU): sebelum +1 geometri per siklus, sesudah 315 → 315 → 315 setelah 12 siklus Low↔Medium dan 320 stabil di Medium↔High.
+- **Kebocoran kecil yang tersisa:** +1 tekstur GPU (kecil) setiap kali tier naik dari Low ke Medium (tidak terjadi Medium ↔ High). Bukan `scene.environment` (sudah dicoba dibuang, tidak berpengaruh); kemungkinan di dalam drei `Environment`. Diabaikan: auto-quality hanya flip-flop maksimum 4 kali lalu berhenti.
+- **Pemecahan chunk dicoba dan dibatalkan:** `manualChunks` (three / r3f / rapier) membuat `index.html` memuat `physics-wasm` (842 kB gzip) dan `r3f` (479 kB gzip) lebih dulu lewat modulepreload, merusak pemuatan malas (halaman awal tidak boleh mengunduh 3D). Rapier + WASM base64 ternyata bagian terbesar chunk Scene (±2,2 MB dari 3,5 MB). Ukuran total gzip tidak berubah, jadi tidak dipakai.
+- **Menunggu pemilik:** FPS di GPU asli (Low/Medium/High di Home, Projects, sungai; desktop dan HP) lewat `?stats`, lalu optimasi yang terbukti (instancing zona, bayangan benda kecil).
 
 ### 2026-11-04 (M2d / #36)
 - `docs/art-direction.md` (baru): palet dengan hex, aturan material, mood cahaya per waktu, checklist aset baru.

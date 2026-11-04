@@ -415,6 +415,13 @@ function Fireflies() {
     const flies: Fly[] = Array.from({ length: FIREFLIES.high }, () => ({ x: 0, y: -10, z: 0, phase: r() * 10, speed: 0.3 + r() * 0.4 }));
     return { mesh, flies };
   }, []);
+  // This mounts and unmounts as the quality changes; <primitive> objects are not disposed for us, so each mount
+  // used to leave one geometry and material behind in GPU memory.
+  useEffect(() => () => {
+    mesh.geometry.dispose();
+    (mesh.material as THREE.Material).dispose();
+    mesh.dispose();
+  }, [mesh]);
   const tmp = useMemo(() => ({ m: new THREE.Matrix4(), q: new THREE.Quaternion(), p: new THREE.Vector3(), s: new THREE.Vector3() }), []);
   useFrame(({ clock }, rawDt) => {
     const dt = Math.min(rawDt, 1 / 30);

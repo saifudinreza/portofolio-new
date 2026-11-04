@@ -236,7 +236,8 @@ export function coreGeometry(k: Kind) {
   }
   for (let i = 0; i < p.count; i++) {
     // darker underneath, like the shade inside a real canopy
-    const f = 0.45 + 0.35 * ((p.getY(i) - minY) / (maxY - minY || 1));
+    // kept well below the leaf colour so a core seen through the gaps reads as shade, not as a smooth plastic ball
+    const f = 0.28 + 0.3 * ((p.getY(i) - minY) / (maxY - minY || 1));
     col.push(deep.r * f, deep.g * f, deep.b * f);
   }
   g.setAttribute('color', new THREE.Float32BufferAttribute(col, 3));

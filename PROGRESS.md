@@ -31,7 +31,7 @@
 |---|---|---|---|
 | 0 — Audit | ISSUE-000 | IN PROGRESS | — |
 | 1 — Stability | ISSUE-014, 020 | IN PROGRESS (PR open) | #32 |
-| 2 — Visual overhaul | ISSUE-001 to 003 (2a-2d) | IN PROGRESS: 2a PR open | #33 (2a), #34 (2b), #35 (2c), #36 (2d) |
+| 2 — Visual overhaul | ISSUE-001 to 003 (2a-2d) | IN PROGRESS: 2a done, 2b PR open | #33 (2a), #34 (2b), #35 (2c), #36 (2d) |
 | 3 — Performance | ISSUE-017, 018, 016 | TODO | #37 |
 | 4 — Driving | ISSUE-004 to 007 | TODO | #38 |
 | 5 — Portfolio | ISSUE-008 to 009 | TODO | #39 |
@@ -152,6 +152,11 @@ _Add reproducible bugs, blockers, and relevant browser/device details here._
 - Created this progress tracker.
 - Next action: perform ISSUE-000 (codebase audit).
 - No implementation status has been assumed or marked complete.
+
+### 2026-11-04 (M2b / #34)
+- Semak tambahan berkelompok di tepi jalan (mulai 14 m dari plaza agar papan petunjuk tidak tertutup) dan di tepi pulau, hanya di Medium/High; Low tetap 70 semak asli.
+- Variasi warna: sekitar 30% semak dan 28% pohon oak berwarna kuning-zaitun atau oranye (pengali warna per instance). Pohon 70 → 88. Inti padat tajuk digelapkan supaya terbaca sebagai bayangan, bukan bola plastik.
+- `?stats` di Home: Trees Low/Med/High 52k/60k/64k → 66k/75k/81k, Details 51k/55k/57k → 51k/77k/80k segitiga; draw call tetap 209/378/398. Total High 935k → 997k (masih di bawah 1.075k sebelum #33).
 
 ### 2026-11-04 (M2a / #33)
 - Rumput: satu instance sekarang satu rumpun 5 bilah lebar (15 segitiga) menggantikan satu bilah tipis (7 segitiga). Tanah di bawah rumput diwarnai zaitun lewat mask "meadow" (`meadowMask` di `textures.ts`, `meadowField` di `layout.ts`). Warna rumput dibuat lebih jenuh, tepi jalan lebih jarang.

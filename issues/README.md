@@ -7,17 +7,19 @@ These are written for a smaller/cheaper AI model, so each file says exactly whic
 
 ## Order and dependencies
 
-| # | File | Feature | Depends on |
-|---|---|---|---|
-| 01 | [01-world-expansion.md](./01-world-expansion.md) | Bigger island (foundation for the rest) | none |
-| 02 | [02-grass-dense-realistic.md](./02-grass-dense-realistic.md) | Thicker, tighter, more realistic grass, no bare soil | 01 |
-| 03 | [03-river-realism.md](./03-river-realism.md) | Realistic river with sloped banks, rocks and decor | 01, 02 |
-| 04 | [04-bridge-redesign.md](./04-bridge-redesign.md) | More realistic, attractive bridge | 03 |
-| 05 | [05-pond-fountain.md](./05-pond-fountain.md) | Statue fountain in the koi pond | 02 |
-| 06 | [06-projects-monuments.md](./06-projects-monuments.md) | A monument or statue per project | 01 |
-| 07 | [07-about-monument.md](./07-about-monument.md) | A real monument building for About Me | 01 |
-| 08 | [08-edge-waterfall-bathing-npcs.md](./08-edge-waterfall-bathing-npcs.md) | Edge waterfall, rocky pool, NPCs bathing | 01, 03 |
-| 09 | [09-loading-screen.md](./09-loading-screen.md) | Game-style, smooth loading screen | none (can be done any time) |
+| # | GitHub | File | Feature | Depends on |
+|---|---|---|---|---|
+| 01 | #49 | [01-world-expansion.md](./01-world-expansion.md) | Bigger island (foundation for the rest) | none |
+| 02 | #50 | [02-grass-dense-realistic.md](./02-grass-dense-realistic.md) | Thicker, tighter, more realistic grass, no bare soil | 01 (#49) |
+| 03 | #51 | [03-river-realism.md](./03-river-realism.md) | Realistic river with sloped banks, rocks and decor | 01 (#49), 02 (#50) |
+| 04 | #52 | [04-bridge-redesign.md](./04-bridge-redesign.md) | More realistic, attractive bridge | 03 (#51) |
+| 05 | #53 | [05-pond-fountain.md](./05-pond-fountain.md) | Statue fountain in the koi pond | 02 (#50) |
+| 06 | #54 | [06-projects-monuments.md](./06-projects-monuments.md) | A monument or statue per project | 01 (#49) |
+| 07 | #55 | [07-about-monument.md](./07-about-monument.md) | A real monument building for About Me | 01 (#49) |
+| 08 | #56 | [08-edge-waterfall-bathing-npcs.md](./08-edge-waterfall-bathing-npcs.md) | Edge waterfall, rocky pool, NPCs bathing | 01 (#49), 03 (#51) |
+| 09 | #57 | [09-loading-screen.md](./09-loading-screen.md) | Game-style, smooth loading screen | none (can be done any time) |
+
+The two-digit numbers (01 to 09) are file numbers. Wherever an issue says "Depends on: 03", look up the GitHub number in this table (#51).
 
 ## Rules that apply to every issue
 
@@ -48,7 +50,7 @@ Read these once before starting any issue.
 - [ ] `?stats` frame time and draw calls before vs after are written in the PR description.
 - [ ] `docs/art-direction.md` updated **only** if the issue introduced a new palette token or material rule.
 - [ ] `PROGRESS.md` gets one line for this issue.
-- [ ] PR title: `feat: <short description> (#<issue>)`. Keep the PR limited to this one issue.
+- [ ] PR title: `feat: <short description> (#<GitHub issue number>)`, e.g. `feat: statue fountain in the koi pond (#53)`, and the PR body says `Closes #53`. Use the GitHub number from the table above, not the file number. Keep the PR limited to this one issue.
 
 ## If you get stuck
 

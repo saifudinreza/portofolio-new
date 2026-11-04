@@ -26,9 +26,24 @@ function Row({ label, children }: { label: string; children: ReactNode }) {
 
 function OptionsPanel() {
   const setMenu = useStore((s) => s.setMenu);
+  const musicVolume = useStore((s) => s.musicVolume);
+  const setMusicVolume = useStore((s) => s.setMusicVolume);
   return (
     <>
       <Row label="Sound"><SoundControl /></Row>
+      <Row label="Music">
+        <div className="sound">
+          <input
+            type="range"
+            min={0}
+            max={1}
+            step={0.05}
+            value={musicVolume}
+            aria-label="Music volume"
+            onChange={(e) => setMusicVolume(Number(e.currentTarget.value))}
+          />
+        </div>
+      </Row>
       <Row label="Graphics"><QualitySelect /></Row>
       <Row label="Stuck?">
         <button

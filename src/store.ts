@@ -13,18 +13,20 @@ export type MenuTab = 'options' | 'controls' | 'achievements' | 'about-site';
 
 const AUDIO_KEY = 'zare-world-audio';
 
-/** Mute + volume survive reloads; storage can be missing or blocked, so fall back quietly. */
-function loadAudioPrefs() {
+type AudioPrefs = { muted: boolean; volume: number; musicVolume: number };
+
+/** Mute + volumes survive reloads; storage can be missing or blocked, so fall back quietly. */
+function loadAudioPrefs(): AudioPrefs {
+  const unit = (v: unknown, fallback: number) => (typeof v === 'number' ? Math.min(1, Math.max(0, v)) : fallback);
   try {
-    const saved = JSON.parse(localStorage.getItem(AUDIO_KEY) ?? '{}') as { muted?: unknown; volume?: unknown };
-    const volume = typeof saved.volume === 'number' ? Math.min(1, Math.max(0, saved.volume)) : 0.7;
-    return { muted: saved.muted === true, volume };
+    const saved = JSON.parse(localStorage.getItem(AUDIO_KEY) ?? '{}') as { muted?: unknown; volume?: unknown; musicVolume?: unknown };
+    return { muted: saved.muted === true, volume: unit(saved.volume, 0.7), musicVolume: unit(saved.musicVolume, 1) };
   } catch {
-    return { muted: false, volume: 0.7 };
+    return { muted: false, volume: 0.7, musicVolume: 1 };
   }
 }
 
-function saveAudioPrefs(prefs: { muted: boolean; volume: number }) {
+function saveAudioPrefs(prefs: AudioPrefs) {
   try {
     localStorage.setItem(AUDIO_KEY, JSON.stringify(prefs));
   } catch {
@@ -84,6 +86,9 @@ type State = {
   setLoad: (progress: number, done: boolean) => void;
   muted: boolean;
   volume: number;
+  /** music level on top of the master volume, 0..1 (the menu's Music slider) */
+  musicVolume: number;
+  setMusicVolume: (v: number) => void;
   /** jeep paint; the menu only offers the ones that are unlocked */
   carSkin: CarSkin;
   setCarSkin: (skin: CarSkin) => void;
@@ -170,13 +175,17 @@ export const useStore = create<State>((set, get) => ({
   setSpeed: (v) => set({ speed: v }),
   setMuted: (muted) => {
     set({ muted });
-    saveAudioPrefs({ muted, volume: get().volume });
+    saveAudioPrefs({ muted, volume: get().volume, musicVolume: get().musicVolume });
   },
   setVolume: (volume) => {
     // dragging the slider up from zero also unmutes, like most players
     const muted = volume > 0 ? false : get().muted;
     set({ volume, muted });
-    saveAudioPrefs({ muted, volume });
+    saveAudioPrefs({ muted, volume, musicVolume: get().musicVolume });
+  },
+  setMusicVolume: (musicVolume) => {
+    set({ musicVolume });
+    saveAudioPrefs({ muted: get().muted, volume: get().volume, musicVolume });
   },
 }));
 

@@ -129,3 +129,5 @@ public/og.jpg            social preview image
 ## Credits
 
 Fonts: Archivo Black and DM Sans, SIL Open Font License. Concept inspired by [bruno-simon.com](https://bruno-simon.com). All models (the jeep, people, trees, props) are built in code for this project and every texture is drawn on a canvas at startup, so there are no third-party model or texture files. All sounds (engine, horn, collisions, splashes) are synthesised at runtime with the Web Audio API, so there are no third-party audio files to license.
+
+Music: none bundled yet. Drop tracks into `public/audio/` as `music-1.mp3` and `music-2.mp3` (they play in turn after "Start driving", with their own slider in the menu; missing files are skipped silently) and credit them here: _track, artist, licence_.

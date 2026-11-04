@@ -31,7 +31,7 @@
 |---|---|---|---|
 | 0 — Audit | ISSUE-000 | IN PROGRESS | — |
 | 1 — Stability | ISSUE-014, 020 | IN PROGRESS (PR open) | #32 |
-| 2 — Visual overhaul | ISSUE-001 to 003 (2a-2d) | TODO | #33 (2a), #34 (2b), #35 (2c), #36 (2d) |
+| 2 — Visual overhaul | ISSUE-001 to 003 (2a-2d) | IN PROGRESS: 2a PR open | #33 (2a), #34 (2b), #35 (2c), #36 (2d) |
 | 3 — Performance | ISSUE-017, 018, 016 | TODO | #37 |
 | 4 — Driving | ISSUE-004 to 007 | TODO | #38 |
 | 5 — Portfolio | ISSUE-008 to 009 | TODO | #39 |
@@ -152,6 +152,11 @@ _Add reproducible bugs, blockers, and relevant browser/device details here._
 - Created this progress tracker.
 - Next action: perform ISSUE-000 (codebase audit).
 - No implementation status has been assumed or marked complete.
+
+### 2026-11-04 (M2a / #33)
+- Rumput: satu instance sekarang satu rumpun 5 bilah lebar (15 segitiga) menggantikan satu bilah tipis (7 segitiga). Tanah di bawah rumput diwarnai zaitun lewat mask "meadow" (`meadowMask` di `textures.ts`, `meadowField` di `layout.ts`). Warna rumput dibuat lebih jenuh, tepi jalan lebih jarang.
+- Segitiga rumput di Home, diukur dengan `?stats`: Low 224k → 168k, Medium 420k → 315k, High 560k → 420k. Draw call tetap (209 / 378 / 398). FPS tidak diukur (tanpa GPU).
+- Screenshot sebelum/sesudah di zona About dan Projects dilihat manual; lint 0 peringatan, tsc dan build lolos.
 
 ### 2026-11-04 (M1 / #32)
 - Branch `feature/stability-32`: `src/ui/ErrorBoundary.tsx` (boundary + layar pemulihan Reload/Classic), `sceneError` di store, handler `webglcontextlost`/`restored` di `Scene.tsx`, pesan loader lambat 30 dtk, `.oxlintrc.json` override untuk `src/world`, perbaikan `set-state-in-effect` di `KeyHints`.

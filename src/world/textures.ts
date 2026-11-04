@@ -1,6 +1,6 @@
 // Procedural textures drawn on canvases at startup: no image files to download, and they stay on-brand.
 import * as THREE from 'three';
-import { rng } from './layout';
+import { WORLD_SIZE, distanceToSegment, isClear, meadowField, rng, roadSegments } from './layout';
 
 const cache = new Map<string, THREE.Texture>();
 
@@ -238,4 +238,36 @@ export function glowMap() {
       g.fillStyle = grad;
       g.fillRect(0, 0, w, h);
     }), { repeat: [1, 1] });
+}
+
+/**
+ * Where grass grows, as a low-res greyscale map of the whole island (one texel is half a metre): 0 on sand, roads and
+ * pads, up to 1 in lush meadow. The ground shader reads it to turn the sand olive under the blades, so no pale gaps show.
+ * Texel row j is world z = (j / N - 0.5) * WORLD_SIZE, so the uv is simply position / WORLD_SIZE + 0.5.
+ */
+let meadow: THREE.DataTexture | null = null;
+export function meadowMask() {
+  if (meadow) return meadow;
+  const n = WORLD_SIZE * 2;
+  const data = new Uint8Array(n * n * 4);
+  for (let j = 0; j < n; j++) {
+    for (let i = 0; i < n; i++) {
+      const x = ((i + 0.5) / n - 0.5) * WORLD_SIZE;
+      const z = ((j + 0.5) / n - 0.5) * WORLD_SIZE;
+      let v = 0;
+      if (isClear(x, z, 2.3)) {
+        const road = Math.min(...roadSegments.map((seg) => distanceToSegment(x, z, seg)));
+        const edge = Math.min(1, Math.max(0, (road - 2.3) / 2.4)); // fades out towards the road
+        v = Math.min(1, 0.65 + meadowField(x, z) * 0.35) * edge;
+      }
+      const o = (j * n + i) * 4;
+      data[o] = data[o + 1] = data[o + 2] = Math.round(v * 255);
+      data[o + 3] = 255;
+    }
+  }
+  meadow = new THREE.DataTexture(data, n, n, THREE.RGBAFormat);
+  meadow.wrapS = meadow.wrapT = THREE.ClampToEdgeWrapping;
+  meadow.magFilter = meadow.minFilter = THREE.LinearFilter;
+  meadow.needsUpdate = true;
+  return meadow;
 }

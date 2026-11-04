@@ -44,6 +44,16 @@ export const projectPadPositions: [number, number][] = [
   [16, -28], [26, -28], [36, -28],
 ];
 
+/**
+ * Where the project monuments stand: one beside each pad, 5 m to its east (between two pads, off the north-south spine
+ * road), turned a little towards the camera. The grand statue closes the north end of the field.
+ */
+export const projectMonuments = projectPadPositions.map(([x, z]) => ({ x: x + 5, z, yaw: 0.35 }));
+export const grandStatue = { x: 21, z: -36, yaw: 0.55 };
+/** Lantern posts between the two rows of monuments and by the grand statue; banner poles along the entrance to the field. */
+export const monumentLanterns: [number, number][] = [[16, -22], [21, -22], [31, -22], [36, -22], [41, -22], [16.5, -32], [25.5, -40]];
+export const bannerPoles: [number, number][] = [[16, -10.5], [21, -10.5], [31, -10.5], [36, -10.5]];
+
 export const warehouse = { x: -24, z: -20 };
 /** The Experience area: its pad, at the end of the west road. */
 export const experienceArea = { x: -58, z: -6 };

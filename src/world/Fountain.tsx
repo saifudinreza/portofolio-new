@@ -4,6 +4,7 @@ import { CylinderCollider, RigidBody } from '@react-three/rapier';
 import * as THREE from 'three';
 import { pond } from './layout';
 import { mossyStoneMaterial } from './stone';
+import { mergeParts } from './geo';
 import { trackLamp } from './dayCycle';
 import { useStore, type Tier } from '../store';
 
@@ -68,25 +69,6 @@ function koiStatue() {
   return { parts, mouth: new THREE.Vector3(0.14, 1.82, 0) };
 }
 
-function merge(parts: THREE.BufferGeometry[]) {
-  // every part is non-indexed after toNonIndexed, so a plain concatenation of attributes is enough
-  const flat = parts.map((g) => (g.index ? g.toNonIndexed() : g));
-  const total = flat.reduce((n, g) => n + g.getAttribute('position').count, 0);
-  const position = new Float32Array(total * 3);
-  const normal = new Float32Array(total * 3);
-  let o = 0;
-  for (const g of flat) {
-    position.set(g.getAttribute('position').array as Float32Array, o * 3);
-    normal.set(g.getAttribute('normal').array as Float32Array, o * 3);
-    o += g.getAttribute('position').count;
-    g.dispose();
-  }
-  const out = new THREE.BufferGeometry();
-  out.setAttribute('position', new THREE.BufferAttribute(position, 3));
-  out.setAttribute('normal', new THREE.BufferAttribute(normal, 3));
-  return out;
-}
-
 /**
  * A tiered stone fountain in the middle of the koi pond, topped by a bronze koi leaping out of the water. Water jets
  * arc from the koi's mouth into the upper basin, from the upper basin into the lower one, and from the lower one into
@@ -116,7 +98,7 @@ export function Fountain({ onRipple }: { onRipple: (x: number, z: number, streng
     const finial = new THREE.SphereGeometry(0.3, 14, 10).scale(1, 0.7, 1).translate(0.18, 2.0, 0);
 
     const koi = koiStatue();
-    const koiGeo = merge(koi.parts);
+    const koiGeo = mergeParts(koi.parts);
 
     // water in the basins
     const waterMat = new THREE.MeshStandardMaterial({ color: '#7FD0C4', roughness: 0.15, transparent: true, opacity: 0.8 });

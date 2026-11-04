@@ -72,6 +72,7 @@ export function Loader() {
 export function TopBar() {
   const teleportTo = useStore((s) => s.teleportTo);
   const setClassic = useStore((s) => s.setClassic);
+  const setMenu = useStore((s) => s.setMenu);
   return (
     <header className="topbar">
       <div className="brand">
@@ -84,8 +85,8 @@ export function TopBar() {
           <button key={z} onClick={(e) => { e.currentTarget.blur(); teleportTo(z); }}>{zones[z].label}</button>
         ))}
       </nav>
-      <QualitySelect />
-      <SoundControl />
+      <div className="sound compact"><MuteButton /></div>
+      <button className="btn small" aria-haspopup="dialog" onClick={() => setMenu('options')}>☰ Menu</button>
       <button className="btn small" onClick={() => setClassic(true)}>Classic view</button>
     </header>
   );
@@ -94,7 +95,7 @@ export function TopBar() {
 const TIER_LABEL = { low: 'Low', medium: 'Medium', high: 'High' } as const;
 
 /** Graphics quality: Auto (adapts to the frame rate) or a fixed Low / Medium / High. Remembered in localStorage. */
-function QualitySelect() {
+export function QualitySelect() {
   const quality = useStore((s) => s.quality);
   const tier = useStore((s) => s.tier);
   const setQuality = useStore((s) => s.setQuality);
@@ -123,35 +124,45 @@ function QualitySelect() {
   );
 }
 
-/** Mute button plus a volume slider (slider hidden on small screens). Both are remembered in localStorage. */
-function SoundControl() {
+/** Mute toggle: stays in the top bar, the volume slider lives in the menu. */
+function MuteButton() {
   const muted = useStore((s) => s.muted);
   const volume = useStore((s) => s.volume);
   const setMuted = useStore((s) => s.setMuted);
   const setVolume = useStore((s) => s.setVolume);
   const silent = muted || volume === 0;
   return (
+    <button
+      className="sound-toggle"
+      aria-label={silent ? 'Unmute sound' : 'Mute sound'}
+      aria-pressed={silent}
+      title={silent ? 'Unmute (L)' : 'Mute (L)'}
+      onClick={(e) => {
+        e.currentTarget.blur();
+        if (volume === 0) setVolume(0.7);
+        else setMuted(!muted);
+      }}
+    >
+      <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden>
+        <path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor" />
+        {silent ? (
+          <path d="M16 9l5 6M21 9l-5 6" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" fill="none" />
+        ) : (
+          <path d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" fill="none" />
+        )}
+      </svg>
+    </button>
+  );
+}
+
+/** Mute button plus a volume slider. Both are remembered in localStorage. */
+export function SoundControl() {
+  const muted = useStore((s) => s.muted);
+  const volume = useStore((s) => s.volume);
+  const setVolume = useStore((s) => s.setVolume);
+  return (
     <div className="sound">
-      <button
-        className="sound-toggle"
-        aria-label={silent ? 'Unmute sound' : 'Mute sound'}
-        aria-pressed={silent}
-        title={silent ? 'Unmute (L)' : 'Mute (L)'}
-        onClick={(e) => {
-          e.currentTarget.blur();
-          if (volume === 0) setVolume(0.7);
-          else setMuted(!muted);
-        }}
-      >
-        <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden>
-          <path d="M4 9h4l5-4v14l-5-4H4z" fill="currentColor" />
-          {silent ? (
-            <path d="M16 9l5 6M21 9l-5 6" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" fill="none" />
-          ) : (
-            <path d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" fill="none" />
-          )}
-        </svg>
-      </button>
+      <MuteButton />
       <input
         type="range"
         min={0}
@@ -167,19 +178,35 @@ function SoundControl() {
   );
 }
 
+const HINT_DRIVE_SECONDS = 10;
+
+/** A short pointer to the menu that fades away once the player has driven for a while (or opened the menu). */
 export function KeyHints() {
+  const started = useStore((s) => s.started);
+  const menuOpen = useStore((s) => s.menuOpen);
+  const [gone, setGone] = useState(false);
+
+  useEffect(() => {
+    if (!started || gone) return;
+    let driven = 0;
+    const id = window.setInterval(() => {
+      if (Math.abs(carState.speed) > 0.5) driven += 0.5;
+      if (driven >= HINT_DRIVE_SECONDS) setGone(true);
+    }, 500);
+    return () => window.clearInterval(id);
+  }, [started, gone]);
+  useEffect(() => {
+    if (menuOpen) setGone(true);
+  }, [menuOpen]);
+
   // keyboard hints make no sense next to on-screen controls
-  if (touchUi()) return null;
+  if (touchUi() || gone || !started) return null;
   return (
     <div className="keyhints" aria-hidden>
       <span><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> drive</span>
-      <span><kbd>Shift</kbd> boost</span>
       <span><kbd>Space</kbd> jump</span>
-      <span><kbd>B</kbd> brake</span>
-      <span><kbd>H</kbd> hold horn</span>
-      <span><kbd>L</kbd> mute</span>
-      <span><kbd>R</kbd> respawn</span>
-      <span>scroll to zoom</span>
+      <span>Controls and settings: <b>☰ Menu</b></span>
+      <span><kbd>M</kbd> map</span>
     </div>
   );
 }

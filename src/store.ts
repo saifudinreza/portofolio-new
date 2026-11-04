@@ -8,6 +8,8 @@ export type Spot =
   | { kind: 'about' }
   | { kind: 'contact'; id: 'github' | 'linkedin' | 'email' };
 
+export type MenuTab = 'options' | 'controls' | 'achievements' | 'about-site';
+
 const AUDIO_KEY = 'zare-world-audio';
 
 /** Mute + volume survive reloads; storage can be missing or blocked, so fall back quietly. */
@@ -70,6 +72,12 @@ type State = {
   muted: boolean;
   volume: number;
   classicOpen: boolean;
+  /** the Menu panel (☰) and which tab it shows, or null when closed */
+  menuOpen: MenuTab | null;
+  /** the big map (M) */
+  mapOpen: boolean;
+  setMenu: (tab: MenuTab | null) => void;
+  setMap: (open: boolean) => void;
   spot: Spot | null;
   teleport: { zone: ZoneId; nonce: number } | null;
   speed: number;
@@ -105,14 +113,25 @@ export const useStore = create<State>((set, get) => ({
   setLoad: (loadProgress, loadDone) => set({ loadProgress, loadDone }),
   ...loadAudioPrefs(),
   classicOpen: false,
+  menuOpen: null,
+  mapOpen: false,
+  // Keys held while a panel opens would never see their keyup, so every opener releases the input first.
+  // The menu and the map never show together.
+  setMenu: (tab) => {
+    if (tab) resetInput();
+    set({ menuOpen: tab, mapOpen: tab ? false : get().mapOpen });
+  },
+  setMap: (open) => {
+    if (open) resetInput();
+    set({ mapOpen: open, menuOpen: open ? null : get().menuOpen });
+  },
   spot: null,
   teleport: null,
   speed: 0,
   start: () => set({ started: true }),
   setClassic: (open) => {
-    // Keys held while the classic view opens would never see their keyup.
     if (open) resetInput();
-    set({ classicOpen: open });
+    set({ classicOpen: open, menuOpen: open ? null : get().menuOpen, mapOpen: open ? false : get().mapOpen });
   },
   setSpot: (spot) => set({ spot }),
   clearSpotIf: (match) => set((s) => (s.spot && match(s.spot) ? { spot: null } : {})),

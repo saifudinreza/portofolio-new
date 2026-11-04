@@ -131,6 +131,9 @@ export function Car() {
   // Scroll to zoom the camera in and out.
   useEffect(() => {
     const onWheel = (e: WheelEvent) => {
+      // scrolling a panel must not zoom the world behind it
+      const st = useStore.getState();
+      if (st.menuOpen || st.mapOpen) return;
       zoom = THREE.MathUtils.clamp(zoom + e.deltaY * 0.0008, 0.55, 1.6);
     };
     window.addEventListener('wheel', onWheel, { passive: true });

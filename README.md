@@ -23,7 +23,7 @@ An interactive portfolio where you drive a little jeep around an island to explo
 - A jump ramp and a cone slalom, just for fun.
 - **Classic view**: the whole portfolio as a normal scrollable page, for recruiters in a hurry and for devices without WebGL.
 
-Controls: `W A S D` or arrow keys to drive, `Shift` boost, `Space` jump, `B` or left `Ctrl` brake, hold `H` for the horn, `L` mute, `R` respawn at the nearest area ("I'm stuck"), scroll to zoom. On phones and tablets a thumb joystick (or arrow buttons, switchable) drives the car, with jump, boost and horn buttons, and the phone buzzes on crashes. The top bar jumps straight to any area and holds the graphics and sound settings. A speedometer with a boost light and a mini-map (areas, pond, people, the car) sit in the corner while you drive.
+Controls: `W A S D` or arrow keys to drive, `Shift` boost, `Space` jump, `B` or left `Ctrl` brake, hold `H` for the horn, `L` mute, `R` respawn at the nearest area ("I'm stuck"), scroll to zoom. On phones and tablets a thumb joystick (or arrow buttons, switchable) drives the car, with jump, boost and horn buttons, and the phone buzzes on crashes. The top bar jumps straight to any area and has a mute button; the ☰ Menu holds the graphics and volume settings, "I'm stuck", the full controls list (keyboard, touch, gamepad) and the credits, and `M` opens a big live map where a click drives you to that area. A speedometer with a boost light and a mini-map (areas, pond, people, the car) sit in the corner while you drive.
 
 ## Graphics and performance
 
@@ -120,7 +120,7 @@ src/
     decorTextures.ts     paving, light pool, fallen leaf and marker textures
     common.tsx           sensors, ground text, signboards
     layout.ts            positions, roads, river and bridge, NPC routes and colour palette
-  ui/                    loader, top bar, driving HUD and mini-map, cards, touch controls, classic view
+  ui/                    loader, top bar, menu, big map, driving HUD and mini-map, cards, touch controls, classic view
 public/fonts/            Archivo Black + DM Sans (OFL), plus a typeface JSON for the 3D letters
 public/og.jpg            social preview image
 ```

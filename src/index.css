@@ -210,6 +210,45 @@ kbd {
 .joystick-knob { width: 58px; height: 58px; border-radius: 50%; background: var(--navy); border: 3px solid var(--cream); box-shadow: 0 3px 0 rgba(0, 0, 0, 0.25); transition: transform var(--dur-fast) var(--ease); pointer-events: none; }
 .joystick:active .joystick-knob { transition: none; }
 
+/* ---------- menu and big map ---------- */
+.sound.compact { padding: 4px; }
+.menu-backdrop { position: fixed; inset: 0; z-index: 20; display: grid; place-items: center; padding: 16px; background: rgba(31, 56, 100, 0.38); animation: fade-up var(--dur) var(--ease) both; }
+.menu {
+  width: min(660px, 100%); max-height: min(82vh, 760px); display: flex; flex-direction: column;
+  background: var(--cream); color: var(--navy); border: var(--border); border-radius: 16px; box-shadow: 6px 6px 0 var(--navy);
+  animation: card-in var(--dur-slow) var(--ease-pop) both;
+}
+.menu:focus { outline: none; }
+.menu-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 12px 14px 0; }
+.menu-head h2 { margin: 0; font-size: 1.2rem; }
+.menu-tabs { display: flex; flex-wrap: wrap; gap: 4px; }
+.menu-tabs button { font: inherit; font-weight: 700; font-size: 0.82rem; color: var(--navy); background: none; border: 2px solid transparent; border-radius: 8px; padding: 0.4em 0.75em; cursor: pointer; }
+.menu-tabs button:hover { background: var(--sand); }
+.menu-tabs button.on { background: var(--navy); color: var(--cream); }
+.menu-tabs button:focus-visible, .menu-close:focus-visible { outline: 3px solid var(--coral); outline-offset: 2px; }
+.menu-close { flex: none; width: 34px; height: 34px; font-size: 1rem; font-weight: 800; color: var(--navy); background: var(--sand); border: 2px solid var(--navy); border-radius: 8px; cursor: pointer; }
+.menu-body { overflow: auto; padding: 14px 18px 18px; }
+.menu-body h3 { margin: 1.1rem 0 0.4rem; font-size: 0.95rem; }
+.menu-body h3:first-child { margin-top: 0.2rem; }
+.menu-body p { margin: 0.4rem 0 0.8rem; font-size: 0.92rem; line-height: 1.5; }
+.menu-body a { color: var(--teal-ink); font-weight: 700; }
+.menu-body a.btn { color: var(--cream); }
+.menu-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding: 10px 0; border-bottom: 1.5px dashed rgba(31, 56, 100, 0.2); }
+.menu-row:last-child { border-bottom: 0; }
+.menu-label { font-weight: 800; font-size: 0.9rem; }
+/* the volume slider is hidden on small screens in the top bar; the menu is where it lives there */
+.menu .sound input { display: inline-block; }
+.menu-table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+.menu-table th, .menu-table td { padding: 5px 0; text-align: left; vertical-align: middle; border-bottom: 1px solid rgba(31, 56, 100, 0.12); }
+.menu-table th { width: 42%; font-weight: 400; padding-right: 10px; }
+.menu-table kbd { margin-right: 4px; }
+.menu-list { margin: 0.2rem 0 0.8rem; padding-left: 1.2rem; font-size: 0.92rem; line-height: 1.6; }
+.menu .muted { color: var(--muted); }
+.bigmap { width: min(620px, 100%); overflow: auto; }
+/* sized by the height first so the zone buttons below stay on screen, with scrolling as the fallback */
+.bigmap-canvas { display: block; flex: none; width: min(46vh, 90vw, 560px); aspect-ratio: 1; margin: 12px auto 8px; border: var(--border); border-radius: 14px; background: #e9d3a6; cursor: pointer; }
+.bigmap-zones { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; padding: 4px 14px 16px; }
+
 /* ---------- classic view ---------- */
 .classic { position: fixed; inset: 0; overflow: auto; background: var(--sand); z-index: 30; scroll-behavior: smooth; animation: fade-up var(--dur-slow) var(--ease) both; }
 .classic-nav {

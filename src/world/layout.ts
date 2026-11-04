@@ -57,7 +57,10 @@ export const bannerPoles: [number, number][] = [[16, -10.5], [21, -10.5], [31, -
 export const warehouse = { x: -24, z: -20 };
 /** The Experience area: its pad, at the end of the west road. */
 export const experienceArea = { x: -58, z: -6 };
-export const aboutArea = { x: -22, z: 26 };
+/** The About courtyard pad, in front of the building (which stands to its west and faces the road). */
+export const aboutArea = { x: -17, z: 26 };
+/** The About monument building: centre of its podium; its front (local +z) faces east, towards the road. */
+export const aboutBuilding = { x: -27.5, z: 26, yaw: Math.PI / 2 };
 export const contactPads: [number, number][] = [[18, 30], [26, 30], [34, 30]];
 /**
  * Empty, flat, tree-free pocket on the east side, reserved for the edge waterfall (issue #56). It sits well clear of the
@@ -164,7 +167,8 @@ const keepClear: [number, number, number][] = [
   [0, 0, 11], // home
   [26, -20, 17], // projects
   [warehouse.x, warehouse.z, 10],
-  [aboutArea.x, aboutArea.z, 9],
+  [aboutArea.x, aboutArea.z, 7],
+  [aboutBuilding.x + 1, aboutBuilding.z, 13], // the About building, its steps and its wings
   [experienceArea.x + 3, experienceArea.z, 13], // pad, milestone boards, crates and the way in
   [26, 29, 13], // contact
   [-8, 10, 5], // ramp

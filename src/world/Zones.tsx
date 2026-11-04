@@ -2,6 +2,7 @@ import { RoundedBox, Text } from '@react-three/drei';
 import { RigidBody, CuboidCollider } from '@react-three/rapier';
 import { useStore, type Spot } from '../store';
 import { crateSkills, projects } from '../data/profile';
+import { AboutMonument } from './AboutMonument';
 import { aboutArea, contactPads, palette, projectPadPositions, warehouse } from './layout';
 import { BODY_FONT, DISPLAY_FONT, GroundText, Sensor, Signboard } from './common';
 import { ProjectProp } from './Props';
@@ -124,32 +125,23 @@ export function Warehouse() {
   );
 }
 
-/** Study corner: education and certifications. */
+/** The About courtyard: the pad in front of the About monument (the building itself is in AboutMonument.tsx). */
 export function AboutArea() {
   const { active, onEnter, onExit } = useSpotHandlers({ kind: 'about' });
   const { x, z } = aboutArea;
   return (
     <group>
-      <Pad x={x} z={z} color={palette.teal} radius={4} active={active} />
-      <Signboard position={[x, 0, z - 6]} width={6} height={2.2} color={palette.navy}>
-        <Text fontSize={0.62} color={palette.cream} font={DISPLAY_FONT} anchorX="center" position={[0, 0.35, 0]}>ABOUT ME</Text>
-        <Text fontSize={0.26} color={palette.cream} font={BODY_FONT} anchorX="center" position={[0, -0.35, 0]} maxWidth={5.4} textAlign="center">Information Systems · Universitas Terbuka</Text>
-      </Signboard>
-      {/* graduation cap */}
-      <group position={[x, 1.4, z]}>
-        <mesh castShadow><cylinderGeometry args={[0.55, 0.6, 0.45, 20]} /><meshStandardMaterial color={palette.dark} /></mesh>
-        <mesh castShadow position={[0, 0.28, 0]} rotation={[0, Math.PI / 4, 0]}><boxGeometry args={[1.7, 0.08, 1.7]} /><meshStandardMaterial color={palette.dark} /></mesh>
-        <mesh position={[0.6, 0.05, 0.6]}><boxGeometry args={[0.05, 0.5, 0.05]} /><meshStandardMaterial color={palette.yellow} /></mesh>
-      </group>
-      {/* stack of books */}
+      <AboutMonument />
+      <Pad x={x} z={z} color={palette.teal} radius={3.2} active={active} />
+      {/* stack of books, beside the pad */}
       {[palette.coral, palette.teal, palette.yellow, palette.navy].map((c, i) => (
-        <RigidBody key={i} position={[x - 6, 0.2 + i * 0.36, z - 1 + (i % 2) * 0.1]} colliders="cuboid" mass={0.2} userData={{ material: 'wood' }}>
+        <RigidBody key={i} position={[x, 0.2 + i * 0.36, z - 5 + (i % 2) * 0.1]} colliders="cuboid" mass={0.2} userData={{ material: 'wood' }}>
           <mesh castShadow><boxGeometry args={[1.6, 0.34, 1.1]} /><meshStandardMaterial color={c} /></mesh>
         </RigidBody>
       ))}
-      <GroundText position={[x, z + 5.4]} size={1.2}>ABOUT</GroundText>
-      <GroundText position={[x, z + 6.6]} size={0.4} color={palette.woodDark} font={BODY_FONT}>Bootcamp 97.26 (A+) · AWS & Python certified</GroundText>
-      <Sensor position={[x, 1, z]} size={[7, 2, 7]} onEnter={onEnter} onExit={onExit} />
+      <GroundText position={[x, z + 4.6]} size={1}>ABOUT</GroundText>
+      <GroundText position={[x, z + 5.7]} size={0.36} color={palette.woodDark} font={BODY_FONT}>Bootcamp 97.26 (A+) · AWS & Python certified</GroundText>
+      <Sensor position={[x, 1, z]} size={[6.4, 2, 6.4]} onEnter={onEnter} onExit={onExit} />
     </group>
   );
 }

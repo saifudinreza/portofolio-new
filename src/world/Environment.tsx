@@ -4,7 +4,8 @@ import { CuboidCollider, RigidBody } from '@react-three/rapier';
 import * as THREE from 'three';
 import { RIVER_HALF_WIDTH, WORLD_SIZE, palette, riverDistance, roadSegments } from './layout';
 import { carState } from './carState';
-import { BODY_FONT, GroundText } from './common';
+import { Text } from '@react-three/drei';
+import { BODY_FONT, DISPLAY_FONT, GroundText, Signboard } from './common';
 import { useStore } from '../store';
 import { groundColorMap, groundNormalMap, roadMap } from './textures';
 
@@ -98,6 +99,14 @@ function dryStretches([x1, z1, x2, z2]: [number, number, number, number]) {
   return out;
 }
 
+const SIGN_YAW = 0.25;
+const SIGNS = [
+  { label: 'PROJECTS', x: 8.5, z: 5.4 },
+  { label: 'SKILLS', x: -9, z: 3.4 },
+  { label: 'ABOUT', x: -9.5, z: 12 },
+  { label: 'CONTACT', x: 7.5, z: 12 },
+];
+
 /** Light dirt roads from the centre to each area. */
 export function Paths() {
   const segments = useMemo(() => roadSegments.filter((_, i) => i !== 5).flatMap(dryStretches), []);
@@ -115,10 +124,13 @@ export function Paths() {
           </mesh>
         );
       })}
-      <GroundText position={[7.2, 3.9]} size={0.5} color={palette.woodDark} rotation={0.35}>PROJECTS</GroundText>
-      <GroundText position={[-9, 3.2]} size={0.5} color={palette.woodDark} rotation={-0.2}>SKILLS</GroundText>
-      <GroundText position={[-6, 12]} size={0.5} color={palette.woodDark} rotation={0.5}>ABOUT</GroundText>
-      <GroundText position={[6.5, 12]} size={0.5} color={palette.woodDark} rotation={-0.45}>CONTACT</GroundText>
+      {/* Where the roads fork: a signboard beside each one instead of text painted on the ground. They sit clear of
+          the 3 m drivable strip and turn a little towards the camera; the posts are solid, so they can be bumped. */}
+      {SIGNS.map(({ label, x, z }) => (
+        <Signboard key={label} position={[x, 0, z]} rotation={SIGN_YAW} width={3} height={0.7}>
+          <Text fontSize={0.34} color={palette.navy} font={DISPLAY_FONT} anchorX="center" anchorY="middle">{label}</Text>
+        </Signboard>
+      ))}
     </group>
   );
 }
@@ -157,7 +169,6 @@ export function HomeText() {
   return (
     <group>
       <GroundText position={[0, 1.6]} size={0.62} color={palette.woodDark} font={BODY_FONT}>Full Stack Web Developer · Kendal, Indonesia</GroundText>
-      <GroundText position={[0, 9.8]} size={0.36} color={palette.woodDark} font={BODY_FONT}>W A S D or arrows to drive · Shift boost · Space jump · B brake · H horn · R respawn</GroundText>
     </group>
   );
 }

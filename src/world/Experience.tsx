@@ -1,4 +1,5 @@
-import { Suspense, lazy, useState } from 'react';
+import { Suspense, lazy, useMemo, useState, type ReactNode } from 'react';
+import { Stats } from './Stats';
 import { Physics } from '@react-three/rapier';
 import { PerformanceMonitor } from '@react-three/drei';
 import { useStore } from '../store';
@@ -47,43 +48,64 @@ function AutoQuality() {
   );
 }
 
+/** Names a part of the world for the `?stats` breakdown. Otherwise just an empty group. */
+function P({ n, children }: { n: string; children: ReactNode }) {
+  return <group userData={{ statsPart: n }}>{children}</group>;
+}
+
 export function Experience({ debug = false }: { debug?: boolean }) {
   const tier = useStore((s) => s.tier);
+  const stats = useMemo(() => new URLSearchParams(window.location.search).has('stats'), []);
   return (
     <>
       <color attach="background" args={[palette.sky]} />
       <fog attach="fog" args={[palette.sky, 50, 115]} />
       <AutoQuality />
+      {stats && <Stats />}
       {/* image-based reflections cost a lookup on every lit pixel (grass included), so not on low */}
       {tier !== 'low' && <EnvLighting />}
-      <Sky />
-      <Clouds />
-      <Sea />
+      <P n="Sky + clouds + sea">
+        <Sky />
+        <Clouds />
+        <Sea />
+      </P>
       <Lights />
       <Suspense fallback={null}>
         <Physics gravity={[0, -25, 0]} debug={debug} timeStep={1 / 60}>
-          <Ground />
-          <Cliffs />
-          <Paths />
-          <HomeText />
-          <Letters text="REZA" size={2.6} depth={0.9} position={[0, 0, -3]} colors={letterColors} gap={0.25} />
-          <Playground />
-          <Circuit />
-          <Trees />
-          <Grass />
-          <Details />
-          <Decor />
-          <Pond />
-          <River />
-          <Bridge />
-          <Npcs />
-          <ImpactParticles />
-          <ProjectsArea />
-          <Warehouse />
-          <AboutArea />
-          <ContactArea />
-          <Car />
-          <CarFx />
+          <P n="Ground, cliffs, roads">
+            <Ground />
+            <Cliffs />
+            <Paths />
+            <HomeText />
+          </P>
+          <P n="Letters">
+            <Letters text="REZA" size={2.6} depth={0.9} position={[0, 0, -3]} colors={letterColors} gap={0.25} />
+          </P>
+          <P n="Playground + circuit">
+            <Playground />
+            <Circuit />
+          </P>
+          <P n="Trees"><Trees /></P>
+          <P n="Grass"><Grass /></P>
+          <P n="Details"><Details /></P>
+          <P n="Decor"><Decor /></P>
+          <P n="Pond"><Pond /></P>
+          <P n="River + bridge">
+            <River />
+            <Bridge />
+          </P>
+          <P n="People"><Npcs /></P>
+          <P n="Zones">
+            <ImpactParticles />
+            <ProjectsArea />
+            <Warehouse />
+            <AboutArea />
+            <ContactArea />
+          </P>
+          <P n="Car">
+            <Car />
+            <CarFx />
+          </P>
         </Physics>
       </Suspense>
       {tier === 'high' && (

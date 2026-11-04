@@ -73,7 +73,15 @@ npm run build     # type-check + production build into dist/
 npm run preview   # serve the production build
 ```
 
-Add `?debug` to the URL to see physics colliders and the raw input, and `?touch` to try the phone controls on a laptop.
+Add `?debug` to the URL to see physics colliders and the raw input, `?touch` to try the phone controls on a laptop, and `?stats` for FPS, draw calls and triangles per frame (every pass, shadows and post-processing included) with meshes and triangles per world part; the same numbers are on `window.__stats`.
+
+Draw calls and triangles at Home, measured with `?stats` (they don't depend on the GPU; FPS does, so measure that on your own machine):
+
+| Tier | Draw calls | Triangles | Heaviest parts |
+| --- | --- | --- | --- |
+| Low | 209 | 523k | grass 224k tris in 1 mesh; zones 180 meshes |
+| Medium | 378 | 920k | grass 420k; the shadow pass nearly doubles the calls |
+| High | 398 | 1.07M | grass 560k; zones 180 meshes, people 77, details 35 |
 
 For production, set `VITE_SITE_URL` (for example `https://your-site.vercel.app`) in the Vercel project settings so the Open Graph and Twitter preview image URLs in `index.html` are absolute.
 

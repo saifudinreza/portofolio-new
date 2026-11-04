@@ -5,7 +5,7 @@ import { Text } from '@react-three/drei';
 import * as THREE from 'three';
 import { bannerPoles, grandStatue, monumentLanterns, palette, projectMonuments, roadSegments, distanceToSegment, riverDistance } from './layout';
 import { projects, profile } from '../data/profile';
-import { Parts, shapes } from './geo';
+import { M, Parts, shapes } from './geo';
 import { mossyStoneMaterial } from './stone';
 import { trackLamp } from './dayCycle';
 import { windUniforms } from './wind';
@@ -13,10 +13,6 @@ import { DISPLAY_FONT } from './common';
 import { useStore, type Tier } from '../store';
 
 const { box, cyl, ball, torus } = shapes;
-
-/** Matrix from a position, an Euler rotation (x, y, z) and a scale. */
-const M = (x = 0, y = 0, z = 0, rx = 0, ry = 0, rz = 0, sx = 1, sy = sx, sz = sx) =>
-  new THREE.Matrix4().compose(new THREE.Vector3(x, y, z), new THREE.Quaternion().setFromEuler(new THREE.Euler(rx, ry, rz)), new THREE.Vector3(sx, sy, sz));
 
 /** Top of the standard two-tier plinth every project monument stands on. */
 const TOP = 0.95;

@@ -36,6 +36,10 @@ export class Parts {
   }
 }
 
+/** Matrix from a position, an Euler rotation (x, y, z) and a scale (one number or three). */
+export const M = (x = 0, y = 0, z = 0, rx = 0, ry = 0, rz = 0, sx = 1, sy = sx, sz = sx) =>
+  new THREE.Matrix4().compose(new THREE.Vector3(x, y, z), new THREE.Quaternion().setFromEuler(new THREE.Euler(rx, ry, rz)), new THREE.Vector3(sx, sy, sz));
+
 /** Handy shapes that stand on y = 0 (so they can be placed by their base). */
 export const shapes = {
   box: (w: number, h: number, d: number) => new THREE.BoxGeometry(w, h, d).translate(0, h / 2, 0),

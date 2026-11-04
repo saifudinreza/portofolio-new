@@ -368,6 +368,8 @@ const SURF_MAX = 0.06;
 const RIVER_MAX = 0.04;
 const WIND_LEVEL = 0.015;
 const BIRD_LEVEL = 0.03;
+/** rain is an extra layer on top of the three above, only while it rains */
+const RAIN_MAX = 0.08;
 
 const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
 
@@ -409,6 +411,7 @@ function createAmbience(c: AudioContext, dest: AudioNode) {
   lfo(1 / 7, 0.3, swell.gain);
 
   const river = noise('bandpass', 1200, 0.7);
+  const rain = noise('highpass', 1500, 0.7);
   const wind = noise('bandpass', 400, 0.8);
   lfo(0.06, 140, wind.filter.frequency); // the wind's pitch wanders slowly
   wind.level.gain.value = WIND_LEVEL;
@@ -441,9 +444,11 @@ function createAmbience(c: AudioContext, dest: AudioNode) {
       setParam(surf.level.gain, SURF_MAX * clamp01((25 - edge) / 17), now, 0.5);
       // river: audible within 12 m of the water, full strength close to it
       setParam(river.level.gain, RIVER_MAX * clamp01((12 - riverDistance(x, z)) / 9), now, 0.5);
+      // rain hiss follows the shower (it fades over seconds already, so a short smoothing is enough)
+      setParam(rain.level.gain, RAIN_MAX * dayState.rain, now, 0.3);
       if (now > nextBird) {
-        // birds keep quiet after dusk
-        if (dayState.night < 0.5) chirp(now);
+        // birds keep quiet after dusk and in the rain
+        if (dayState.night < 0.5 && dayState.rain < 0.3) chirp(now);
         nextBird = now + 4 + Math.random() * 6;
       }
     },

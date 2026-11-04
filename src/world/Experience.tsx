@@ -1,6 +1,7 @@
 import { Suspense, lazy, useMemo, useState, type ReactNode } from 'react';
 import { Stats } from './Stats';
-import { DayCycle } from './dayCycle';
+import { DayCycle, FOG_FAR, FOG_NEAR } from './dayCycle';
+import { Rain } from './Rain';
 import { Physics } from '@react-three/rapier';
 import { PerformanceMonitor } from '@react-three/drei';
 import { useStore } from '../store';
@@ -60,7 +61,7 @@ export function Experience({ debug = false }: { debug?: boolean }) {
   return (
     <>
       <color attach="background" args={[palette.sky]} />
-      <fog attach="fog" args={[palette.sky, 50, 115]} />
+      <fog attach="fog" args={[palette.sky, FOG_NEAR, FOG_FAR]} />
       <AutoQuality />
       {/* first, so every other part reads this frame's time of day */}
       <DayCycle />
@@ -72,6 +73,11 @@ export function Experience({ debug = false }: { debug?: boolean }) {
         <Clouds />
         <Sea />
       </P>
+      {tier !== 'low' && (
+        <P n="Rain">
+          <Rain />
+        </P>
+      )}
       <Lights />
       <Suspense fallback={null}>
         <Physics gravity={[0, -25, 0]} debug={debug} timeStep={1 / 60}>

@@ -13,6 +13,19 @@ export type MenuTab = 'options' | 'controls' | 'achievements' | 'about-site';
 /** Time of day: a fixed look, or 'auto' for the 10-minute day/night cycle. Kept here so the main chunk never imports three. */
 export type TimeMode = 'auto' | 'day' | 'dusk' | 'night';
 const TIME_KEY = 'zare-world-time';
+/** Clear skies, rain, or 'auto': a shower of about two minutes every eight. */
+export type Weather = 'clear' | 'rain' | 'auto';
+const WEATHER_KEY = 'zare-world-weather';
+
+function loadWeather(): Weather {
+  try {
+    const saved = localStorage.getItem(WEATHER_KEY);
+    if (saved === 'clear' || saved === 'rain' || saved === 'auto') return saved;
+  } catch {
+    // fall through to the default
+  }
+  return 'clear';
+}
 
 function loadTimeMode(): TimeMode {
   try {
@@ -104,6 +117,8 @@ type State = {
   setMusicVolume: (v: number) => void;
   timeMode: TimeMode;
   setTimeMode: (mode: TimeMode) => void;
+  weather: Weather;
+  setWeather: (weather: Weather) => void;
   /** jeep paint; the menu only offers the ones that are unlocked */
   carSkin: CarSkin;
   setCarSkin: (skin: CarSkin) => void;
@@ -153,6 +168,15 @@ export const useStore = create<State>((set, get) => ({
     set({ timeMode });
     try {
       localStorage.setItem(TIME_KEY, timeMode);
+    } catch {
+      // not remembered, that's fine
+    }
+  },
+  weather: loadWeather(),
+  setWeather: (weather) => {
+    set({ weather });
+    try {
+      localStorage.setItem(WEATHER_KEY, weather);
     } catch {
       // not remembered, that's fine
     }

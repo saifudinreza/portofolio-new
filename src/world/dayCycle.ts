@@ -15,6 +15,18 @@ export const DAY_SECONDS = 600;
 const PRESET_SPEED = 0.25;
 /** scene.environmentIntensity the env map was tuned at (see EnvLighting) */
 const ENV_BASE = 0.35;
+/** fog distances the scene was tuned with (clear weather), and how close it comes in heavy rain */
+export const FOG_NEAR = 50;
+export const FOG_FAR = 115;
+const RAIN_FOG_NEAR = 28;
+const RAIN_FOG_FAR = 80;
+/** rain fades in and out over this many seconds */
+const RAIN_FADE = 5;
+/** automatic weather: a shower of RAIN_SECONDS at the end of every WEATHER_PERIOD */
+const WEATHER_PERIOD = 480;
+const RAIN_SECONDS = 120;
+const RAIN_GREY = new THREE.Color('#9AA3AD');
+const RAIN_SKY = new THREE.Color('#8E98A4');
 
 type Keyframe = {
   t: number;
@@ -82,9 +94,34 @@ export function sampleDay(t: number, out: DaySample = daySample) {
 }
 
 const startMode = useStore.getState().timeMode;
-export const day = { t: startMode === 'auto' ? TIME_PRESET.day : TIME_PRESET[startMode] };
+const startWeather = useStore.getState().weather;
+export const day = {
+  t: startMode === 'auto' ? TIME_PRESET.day : TIME_PRESET[startMode],
+  /** 0..1, eased towards the weather's target */
+  rain: startWeather === 'rain' ? 1 : 0,
+  /** seconds into the automatic weather period */
+  weatherClock: 0,
+};
+
+/** Rain darkens the sun, greys out the sky and pulls the fog in. Applied on top of the time-of-day sample. */
+function applyRain(s: DaySample, rain: number) {
+  if (rain <= 0) return;
+  s.sunIntensity *= 1 - 0.4 * rain;
+  s.sunGlow *= 1 - 0.8 * rain;
+  // the fill light has to drop too, or the env map keeps the island looking sunny under the clouds
+  s.hemiIntensity *= 1 - 0.35 * rain;
+  s.env *= 1 - 0.5 * rain;
+  // keep night dark: the grey is mixed in less where the sky is already deep blue
+  const grey = 0.6 * rain * (1 - 0.6 * s.night);
+  s.fog.lerp(RAIN_GREY, grey);
+  s.horizon.lerp(RAIN_GREY, grey);
+  s.zenith.lerp(RAIN_SKY, grey);
+  s.hemiSky.lerp(RAIN_GREY, grey * 0.5);
+}
 sampleDay(day.t);
+applyRain(daySample, day.rain);
 dayState.night = daySample.night;
+dayState.rain = day.rain;
 
 // Materials that follow the time of day. They register themselves once with their tuned (daytime) value.
 const lamps = new Set<{ m: THREE.MeshStandardMaterial; base: number }>();
@@ -115,7 +152,11 @@ export function DayCycle() {
   const scene = useThree((s) => s.scene);
   useFrame((_, rawDt) => {
     const dt = Math.min(rawDt, 0.1);
-    const mode = useStore.getState().timeMode;
+    const { timeMode: mode, weather } = useStore.getState();
+    day.weatherClock = (day.weatherClock + dt) % WEATHER_PERIOD;
+    const wantRain = weather === 'rain' || (weather === 'auto' && day.weatherClock > WEATHER_PERIOD - RAIN_SECONDS);
+    day.rain = THREE.MathUtils.clamp(day.rain + (wantRain ? 1 : -1) * (dt / RAIN_FADE), 0, 1);
+    dayState.rain = day.rain;
     if (mode === 'auto') day.t = THREE.MathUtils.euclideanModulo(day.t + dt / DAY_SECONDS, 1);
     else {
       const d = circularDelta(day.t, TIME_PRESET[mode]);
@@ -123,9 +164,14 @@ export function DayCycle() {
       day.t = THREE.MathUtils.euclideanModulo(Math.abs(d) <= step ? TIME_PRESET[mode] : day.t + Math.sign(d) * step, 1);
     }
     const s = sampleDay(day.t);
+    applyRain(s, day.rain);
     dayState.night = s.night;
     if (scene.background instanceof THREE.Color) scene.background.copy(s.fog);
-    scene.fog?.color.copy(s.fog);
+    if (scene.fog instanceof THREE.Fog) {
+      scene.fog.color.copy(s.fog);
+      scene.fog.near = THREE.MathUtils.lerp(FOG_NEAR, RAIN_FOG_NEAR, day.rain);
+      scene.fog.far = THREE.MathUtils.lerp(FOG_FAR, RAIN_FOG_FAR, day.rain);
+    }
     scene.environmentIntensity = ENV_BASE * s.env;
     for (const l of lamps) l.m.emissiveIntensity = l.base * s.lamp;
     for (const h of headlights) h.m.opacity = Math.min(1, h.base * s.headlight);

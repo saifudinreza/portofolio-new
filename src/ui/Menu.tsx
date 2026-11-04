@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { input, useStore, type MenuTab, type TimeMode } from '../store';
+import { input, useStore, type MenuTab, type TimeMode, type Weather } from '../store';
 import { profile } from '../data/profile';
 import { ACHIEVEMENTS, SKIN_RULES, resetAchievements, useAchievements, type AchievementId } from '../game/achievements';
 import { CAR_SKINS, type CarSkin } from '../world/layout';
@@ -26,6 +26,8 @@ function Row({ label, children }: { label: string; children: ReactNode }) {
 
 function OptionsPanel() {
   const setMenu = useStore((s) => s.setMenu);
+  const weather = useStore((s) => s.weather);
+  const setWeather = useStore((s) => s.setWeather);
   const timeMode = useStore((s) => s.timeMode);
   const setTimeMode = useStore((s) => s.setTimeMode);
   const musicVolume = useStore((s) => s.musicVolume);
@@ -55,6 +57,16 @@ function OptionsPanel() {
             <option value="dusk">Dusk</option>
             <option value="night">Night</option>
             <option value="auto">Automatic (10-minute day)</option>
+          </select>
+        </label>
+      </Row>
+      <Row label="Weather">
+        <label className="quality">
+          <span className="sr-only">Weather</span>
+          <select value={weather} onChange={(e) => setWeather(e.currentTarget.value as Weather)}>
+            <option value="clear">Clear</option>
+            <option value="rain">Rain</option>
+            <option value="auto">Automatic (a shower now and then)</option>
           </select>
         </label>
       </Row>

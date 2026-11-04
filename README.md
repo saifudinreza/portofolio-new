@@ -21,7 +21,7 @@ An interactive portfolio where you drive a little jeep around an island to explo
 - **Contact**: GitHub, LinkedIn and email pads.
 - **River and bridge**: a river winds from the north shore past Home and out to the east, spilling off the cliffs as a waterfall at both ends. A wooden bridge carries the Projects road over it; anywhere else you can wade across (slowly, with a splash).
 - A jump ramp and a cone slalom, just for fun.
-- **Time of day**: Day (the default look), Dusk, Night or an automatic 10-minute cycle, picked in the menu. Sun, sky, fog, ambient light, lamps and the jeep's headlights follow it, and the birds go quiet after dark.
+- **Time of day**: Day (the default look), Dusk, Night or an automatic 10-minute cycle, picked in the menu. Sun, sky, fog, ambient light, lamps and the jeep's headlights follow it, and the birds go quiet after dark. **Weather** (Clear, Rain or an occasional automatic shower) greys the light, pulls the fog in, adds wind-blown streaks (Medium and High only, fewer with reduced motion) and a soft rain hiss. No lightning.
 - **Ambience**: soft surf near the shore, a trickle near the river, a light wind and the odd bird, all synthesised and mixed far below the engine. Achievements, jeep paint jobs to unlock and a big map sit in the menu.
 - **Classic view**: the whole portfolio as a normal scrollable page, for recruiters in a hurry and for devices without WebGL.
 

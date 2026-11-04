@@ -3,6 +3,7 @@ import { input, resetInput, useStore } from './store';
 import { Toast } from './ui/Toast';
 import { CircuitHud } from './ui/CircuitHud';
 import { Classic } from './ui/Classic';
+import { ErrorBoundary, SceneError } from './ui/ErrorBoundary';
 import { InputDebug, KeyHints, Loader, TopBar, TouchControls } from './ui/Hud';
 import { DriveHud } from './ui/DriveHud';
 import { BigMap } from './ui/BigMap';
@@ -55,6 +56,7 @@ function hasWebGL() {
 
 export default function App() {
   const classicOpen = useStore((s) => s.classicOpen);
+  const sceneError = useStore((s) => s.sceneError);
   const setClassic = useStore((s) => s.setClassic);
   const webgl = useMemo(() => hasWebGL(), []);
   const debug = useMemo(() => new URLSearchParams(location.search).has('debug'), []);
@@ -119,9 +121,11 @@ export default function App() {
   return (
     <>
       {loadScene && (
-        <Suspense fallback={null}>
-          <Scene debug={debug} />
-        </Suspense>
+        <ErrorBoundary>
+          <Suspense fallback={null}>
+            <Scene debug={debug} />
+          </Suspense>
+        </ErrorBoundary>
       )}
       <TopBar />
       <DriveHud />
@@ -133,7 +137,7 @@ export default function App() {
       <Toast />
       <CircuitHud />
       {debug && <InputDebug />}
-      <Loader />
+      {sceneError ? <SceneError /> : <Loader />}
       {classicOpen && <Classic />}
     </>
   );

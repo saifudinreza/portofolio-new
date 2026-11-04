@@ -15,6 +15,9 @@ const TIPS = [
 ];
 const TOUCH_TIPS = ['Use the joystick to steer and drive', 'Park on a glowing pad to open a project', 'Tap the bolt to boost, the arrow to jump'];
 
+/** After this long without the 3D world being ready, the loader says it is slow. */
+const SLOW_LOAD_MS = 30_000;
+
 export function Loader() {
   const progress = useStore((s) => s.loadProgress);
   const ready = useStore((s) => s.loadDone);
@@ -23,6 +26,7 @@ export function Loader() {
   const setClassic = useStore((s) => s.setClassic);
   const [tip, setTip] = useState(0);
   const [gone, setGone] = useState(false);
+  const [slow, setSlow] = useState(false);
   const tips = touchUi() ? TOUCH_TIPS : TIPS;
 
   // Also allow starting with any driving key.
@@ -40,6 +44,13 @@ export function Loader() {
     const id = window.setInterval(() => setTip((t) => (t + 1) % tips.length), 3200);
     return () => window.clearInterval(id);
   }, [started, tips.length]);
+
+  // A slow connection or a stalled download: say so and point at the classic view instead of leaving a silent bar.
+  useEffect(() => {
+    if (ready || started) return;
+    const id = window.setTimeout(() => setSlow(true), SLOW_LOAD_MS);
+    return () => window.clearTimeout(id);
+  }, [ready, started]);
 
   // Fade out instead of vanishing, then unmount.
   useEffect(() => {
@@ -59,7 +70,11 @@ export function Loader() {
         <div className={`bar${progress === 0 && !ready ? ' indeterminate' : ''}`} role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(progress)} aria-label="Loading the 3D world">
           <span style={{ width: `${ready ? 100 : progress}%` }} />
         </div>
-        <p className="tip" key={tip} aria-live="polite"><b>Tip</b> {tips[tip]}</p>
+        {slow && !ready ? (
+          <p className="tip" role="status"><b>Still loading…</b> This is taking longer than usual. You can wait, reload, or use the classic view.</p>
+        ) : (
+          <p className="tip" key={tip} aria-live="polite"><b>Tip</b> {tips[tip]}</p>
+        )}
         <div className="actions center">
           <button className="btn primary big" disabled={!ready || started} onClick={start}>{ready ? 'Start driving' : `Loading ${Math.round(progress)}%`}</button>
           <button className="btn" onClick={() => setClassic(true)}>Classic view</button>
@@ -195,9 +210,8 @@ export function KeyHints() {
     }, 500);
     return () => window.clearInterval(id);
   }, [started, gone]);
-  useEffect(() => {
-    if (menuOpen) setGone(true);
-  }, [menuOpen]);
+  // opening the menu retires the hint for good (state set while rendering, not in an effect)
+  if (menuOpen && !gone) setGone(true);
 
   // keyboard hints make no sense next to on-screen controls
   if (touchUi() || gone || !started) return null;

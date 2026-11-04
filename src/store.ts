@@ -110,6 +110,9 @@ type State = {
   loadProgress: number;
   loadDone: boolean;
   setLoad: (progress: number, done: boolean) => void;
+  /** Set when the 3D side fails (render error, failed chunk, lost GL context). Shows the recovery screen. */
+  sceneError: 'crash' | 'context-lost' | null;
+  setSceneError: (e: 'crash' | 'context-lost' | null) => void;
   muted: boolean;
   volume: number;
   /** music level on top of the master volume, 0..1 (the menu's Music slider) */
@@ -162,6 +165,8 @@ export const useStore = create<State>((set, get) => ({
   loadProgress: 0,
   loadDone: false,
   setLoad: (loadProgress, loadDone) => set({ loadProgress, loadDone }),
+  sceneError: null,
+  setSceneError: (sceneError) => set({ sceneError }),
   ...loadAudioPrefs(),
   timeMode: loadTimeMode(),
   setTimeMode: (timeMode) => {

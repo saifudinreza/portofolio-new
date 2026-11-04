@@ -29,6 +29,15 @@ export default function Scene({ debug }: { debug: boolean }) {
         dpr={[1, MAX_DPR[tier]]}
         camera={{ fov: 38, near: 0.5, far: 200, position: [30, 26, 46] }}
         gl={{ antialias: true, powerPreference: 'high-performance' }}
+        onCreated={({ gl }) => {
+          // The browser can take the GPU away (driver reset, too many contexts). Without this the page just freezes.
+          const { setSceneError } = useStore.getState();
+          gl.domElement.addEventListener('webglcontextlost', (e) => {
+            e.preventDefault();
+            setSceneError('context-lost');
+          });
+          gl.domElement.addEventListener('webglcontextrestored', () => setSceneError(null));
+        }}
       >
         <Suspense fallback={null}>
           <Experience debug={debug} />

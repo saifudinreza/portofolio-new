@@ -3,7 +3,7 @@ import { useFrame } from '@react-three/fiber';
 import { BallCollider, RigidBody } from '@react-three/rapier';
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
-import { RIVER_BANK, RIVER_HALF_WIDTH, RIVER_WATER, WORLD_SIZE, bridge, distanceToSegment, inRiver, palette, riverPath, rng, roadSegments, type RiverPoint } from './layout';
+import { RIVER_BANK, RIVER_HALF_WIDTH, RIVER_WATER, WORLD_SIZE, bridge, distanceToSegment, inRiver, palette, riverBedHeight, riverPath, rng, roadSegments, terrainHeight, type RiverPoint } from './layout';
 import { SEA_LEVEL } from './Atmosphere';
 import { actors, type Actor } from './actors';
 import { splash } from '../ui/sound';
@@ -15,6 +15,9 @@ const H = RIVER_HALF_WIDTH;
 const MAX_DROPS = 70;
 const FLOW_SPEED = 0.9; // m/s, visual only
 const REED_CLUSTERS: Record<Tier, number> = { low: 54, medium: 95, high: 122 };
+/** Rocks sunk into the slope of the bank, and flowers on its upper half: how many to draw per tier. */
+const SLOPE_ROCKS: Record<Tier, number> = { low: 24, medium: 48, high: 80 };
+const BANK_FLOWERS: Record<Tier, number> = { low: 30, medium: 60, high: 100 };
 const SUN = new THREE.Vector3(12, 22, 8).normalize();
 
 /** The part of the river on the island, so meshes stop at the cliff edge where the waterfalls start. */
@@ -30,8 +33,9 @@ const offset = (p: RiverPoint, across: number): [number, number] => [p.x - p.tz 
 /**
  * Strip along the river between two signed offsets, `cols` vertices across. Each vertex carries
  * aRiver = (across in metres, distance along the river) for the shaders; `color` optionally gives RGBA per column.
+ * `y` is a height, or a function of the offset when the strip has to follow the sloping terrain.
  */
-function ribbon(from: number, to: number, y: number, cols = 2, color?: (col: number) => [number, number, number, number]) {
+function ribbon(from: number, to: number, y: number | ((across: number) => number), cols = 2, color?: (col: number) => [number, number, number, number]) {
   const pos: number[] = [];
   const river: number[] = [];
   const colors: number[] = [];
@@ -40,7 +44,7 @@ function ribbon(from: number, to: number, y: number, cols = 2, color?: (col: num
     for (let c = 0; c < cols; c++) {
       const across = from + ((to - from) * c) / (cols - 1);
       const [x, z] = offset(p, across);
-      pos.push(x, y, z);
+      pos.push(x, typeof y === 'number' ? y : y(across), z);
       river.push(across, p.s);
       if (color) colors.push(...color(c));
       if (i > 0 && c > 0) {
@@ -274,30 +278,36 @@ export function River() {
   const scene = useMemo(() => {
     const r = rng(91);
     const time = { value: 0 };
-    const water = new THREE.Mesh(ribbon(-H, H, RIVER_WATER), waterMaterial(time));
+    // a little wider than the channel, so the water's edge always runs into the sloping bank
+    const water = new THREE.Mesh(ribbon(-H - 0.3, H + 0.3, RIVER_WATER), waterMaterial(time));
     water.renderOrder = 2;
-    const bed = new THREE.Mesh(ribbon(-H - 0.2, H + 0.2, 0.011, 7), bedMaterial(time));
+    // the strips below follow the trench (a hair above it, so they never sink into the ground mesh)
+    const onBed = (across: number) => riverBedHeight(Math.abs(across)) + 0.03;
+    const bed = new THREE.Mesh(ribbon(-H - 0.2, H + 0.2, onBed, 9), bedMaterial(time));
     bed.receiveShadow = true;
 
     // Banks: wet dark sand at the water, dry sand, then fading into the ground with a ragged outer edge.
     const wet = new THREE.Color('#BFA274');
     const dry = new THREE.Color('#E9D5A6');
     const bankMaterial = new THREE.MeshStandardMaterial({ vertexColors: true, transparent: true, depthWrite: false, roughness: 1, polygonOffset: true, polygonOffsetFactor: -1 });
+    const BANK_COLS = 9;
+    const mixed = new THREE.Color();
     const bankColor = (c: number): [number, number, number, number] => {
-      const col = c === 0 ? wet : dry;
-      return [col.r, col.g, col.b, c === 2 ? 0 : 1];
+      const f = c / (BANK_COLS - 1);
+      mixed.copy(wet).lerp(dry, THREE.MathUtils.smoothstep(f, 0, 0.45));
+      return [mixed.r, mixed.g, mixed.b, f < 0.7 ? 1 : 1 - (f - 0.7) / 0.3];
     };
     // both banks in one mesh (and below, both waterfalls and both foam patches): one draw call each
     const bankGeometries = [1, -1].map((side) => {
-      // three columns: water line, dry sand, faded edge; the outer column wobbles for a natural edge
-      const geom = ribbon(side * (H - 0.3), side * (H + RIVER_BANK), 0.009, 3, bankColor);
+      // wet sand at the water line, drying out up the slope and fading into the ground; the outer column wobbles
+      const geom = ribbon(side * (H - 0.3), side * (H + RIVER_BANK), onBed, BANK_COLS, bankColor);
       const pos = geom.getAttribute('position');
       const riv = geom.getAttribute('aRiver');
       for (let i = 0; i < pos.count; i++) {
-        if (i % 3 !== 2) continue;
+        if (i % BANK_COLS !== BANK_COLS - 1) continue;
         const s = riv.getY(i);
         const wobble = Math.sin(s * 0.9) * 0.35 + Math.sin(s * 2.3 + side) * 0.2;
-        const p = onIsland[Math.floor(i / 3)];
+        const p = onIsland[Math.floor(i / BANK_COLS)];
         pos.setX(i, pos.getX(i) - p.tz * side * wobble);
         pos.setZ(i, pos.getZ(i) + p.tx * side * wobble);
       }
@@ -321,37 +331,37 @@ export function River() {
     };
     const pebbles: { x: number; z: number; s: number }[] = [];
     for (let guard = 0; pebbles.length < 320 && guard < 2600; guard++) {
-      const { x, z } = place(H - 0.4 + r() * 1.2);
+      const { x, z } = place(H - 0.5 + r() * 2.2);
       if (nearCrossing(x, z) || Math.max(Math.abs(x), Math.abs(z)) > HALF - 1) continue;
       pebbles.push({ x, z, s: 0.06 + r() ** 2 * 0.16 });
     }
-    const boulders: { x: number; z: number; s: number }[] = [];
+    const boulders: { x: number; y: number; z: number; s: number }[] = [];
     for (let guard = 0; boulders.length < 22 && guard < 2600; guard++) {
-      const { x, z } = place(H + 0.2 + r() * 1.1);
+      const { x, z } = place(H - 0.2 + r() * 2.2);
       const s = 0.35 + r() * 0.45;
       if (nearCrossing(x, z) || Math.max(Math.abs(x), Math.abs(z)) > HALF - 2 || boulders.some((b) => Math.hypot(b.x - x, b.z - z) < 3)) continue;
-      boulders.push({ x, z, s });
+      boulders.push({ x, y: terrainHeight(x, z), z, s });
     }
     const stone = mossyStoneMaterial();
     const pebbleMesh = new THREE.InstancedMesh(rockGeometry(1, 1), stone, pebbles.length);
     pebbles.forEach((k, i) => {
-      pebbleMesh.setMatrixAt(i, matrix.compose(v.set(k.x, k.s * 0.2, k.z), q.setFromEuler(e.set(0, r() * 6.3, 0)), sc.set(k.s * (1 + r() * 0.5), k.s * 0.55, k.s)));
+      pebbleMesh.setMatrixAt(i, matrix.compose(v.set(k.x, terrainHeight(k.x, k.z) + k.s * 0.2, k.z), q.setFromEuler(e.set(0, r() * 6.3, 0)), sc.set(k.s * (1 + r() * 0.5), k.s * 0.55, k.s)));
       pebbleMesh.setColorAt(i, color.set(r() < 0.3 ? '#C9BBA2' : palette.rock).offsetHSL(0, 0, (r() - 0.5) * 0.14));
     });
     pebbleMesh.receiveShadow = true;
     const boulderMesh = new THREE.InstancedMesh(rockGeometry(4), stone, boulders.length);
     boulders.forEach((k, i) => {
-      boulderMesh.setMatrixAt(i, matrix.compose(v.set(k.x, k.s * 0.35, k.z), q.setFromEuler(e.set((r() - 0.5) * 0.3, r() * 6.3, (r() - 0.5) * 0.3)), sc.set(k.s * 1.2, k.s * 0.8, k.s)));
+      boulderMesh.setMatrixAt(i, matrix.compose(v.set(k.x, k.y + k.s * 0.35, k.z), q.setFromEuler(e.set((r() - 0.5) * 0.3, r() * 6.3, (r() - 0.5) * 0.3)), sc.set(k.s * 1.2, k.s * 0.8, k.s)));
       boulderMesh.setColorAt(i, color.set(palette.rock).offsetHSL(0, 0, (r() - 0.5) * 0.12));
     });
     boulderMesh.castShadow = boulderMesh.receiveShadow = true;
 
     // Reeds and tall grass in clumps along the water's edge; greens with some dry straw blades.
-    const clumps: { x: number; z: number }[] = [];
+    const clumps: { x: number; y: number; z: number }[] = [];
     for (let guard = 0; clumps.length < REED_CLUSTERS.high && guard < 3000; guard++) {
-      const { x, z } = place(H - 0.2 + r() * 1.3);
+      const { x, z } = place(H - 0.3 + r() * 2);
       if (nearCrossing(x, z) || Math.max(Math.abs(x), Math.abs(z)) > HALF - 1) continue;
-      clumps.push({ x, z });
+      clumps.push({ x, y: terrainHeight(x, z), z });
     }
     const blade = new THREE.ConeGeometry(0.035, 1, 3, 4).translate(0, 0.5, 0);
     const blades: { m: THREE.Matrix4; c: THREE.Color; clump: number }[] = [];
@@ -362,7 +372,7 @@ export function River() {
         const d = r() * 0.35;
         const h = 0.55 + r() * 0.75;
         blades.push({
-          m: new THREE.Matrix4().compose(v.set(k.x + Math.cos(a) * d, 0, k.z + Math.sin(a) * d), q.setFromEuler(e.set((r() - 0.5) * 0.5, r() * 6.3, (r() - 0.5) * 0.5)), sc.set(1, h, 1)),
+          m: new THREE.Matrix4().compose(v.set(k.x + Math.cos(a) * d, k.y, k.z + Math.sin(a) * d), q.setFromEuler(e.set((r() - 0.5) * 0.5, r() * 6.3, (r() - 0.5) * 0.5)), sc.set(1, h, 1)),
           c: new THREE.Color(r() < 0.22 ? '#CDB46A' : r() < 0.5 ? '#7E9A4C' : '#5E8A3E').offsetHSL((r() - 0.5) * 0.03, 0, (r() - 0.5) * 0.1),
           clump: ci,
         });
@@ -374,6 +384,37 @@ export function River() {
       reedMesh.setColorAt(i, b.c);
     });
     reedMesh.castShadow = true;
+
+    // Medium rocks sunk into the slope (not solid, they stand no higher than a wheel), and flowers on its upper half.
+    // Counts per tier are a prefix of the instances, so they are placed in random order.
+    const slope: { x: number; y: number; z: number; s: number }[] = [];
+    for (let guard = 0; slope.length < SLOPE_ROCKS.high && guard < 3000; guard++) {
+      const { x, z } = place(H + 0.1 + r() * 2.2);
+      if (nearCrossing(x, z) || Math.max(Math.abs(x), Math.abs(z)) > HALF - 2) continue;
+      slope.push({ x, y: terrainHeight(x, z), z, s: 0.22 + r() ** 1.5 * 0.34 });
+    }
+    const slopeRockMesh = new THREE.InstancedMesh(rockGeometry(9), stone, slope.length);
+    slope.forEach((k, i) => {
+      // sunk about a third into the ground, tilted along the slope
+      slopeRockMesh.setMatrixAt(i, matrix.compose(v.set(k.x, k.y + k.s * 0.18, k.z), q.setFromEuler(e.set((r() - 0.5) * 0.5, r() * 6.3, (r() - 0.5) * 0.5)), sc.set(k.s * (1 + r() * 0.5), k.s * 0.75, k.s)));
+      slopeRockMesh.setColorAt(i, color.set(r() < 0.3 ? '#A8A08C' : palette.rock).offsetHSL(0, 0, (r() - 0.5) * 0.14));
+    });
+    slopeRockMesh.castShadow = slopeRockMesh.receiveShadow = true;
+
+    const flowerSpots: { x: number; y: number; z: number; h: number; c: string }[] = [];
+    const flowerColors = [palette.coral, palette.yellow, palette.cream, '#B18CD9'];
+    for (let guard = 0; flowerSpots.length < BANK_FLOWERS.high && guard < 3000; guard++) {
+      const { x, z } = place(H + 1.5 + r() * 1.0);
+      if (nearCrossing(x, z) || Math.max(Math.abs(x), Math.abs(z)) > HALF - 2) continue;
+      flowerSpots.push({ x, y: terrainHeight(x, z), z, h: 0.18 + r() * 0.2, c: flowerColors[Math.floor(r() * flowerColors.length)] });
+    }
+    const stemMesh = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.012, 0.016, 1, 4).translate(0, 0.5, 0), new THREE.MeshStandardMaterial({ color: '#5E8A3E', roughness: 1 }), flowerSpots.length);
+    const bloomMesh = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(0.065, 0), new THREE.MeshStandardMaterial({ roughness: 0.8 }), flowerSpots.length);
+    flowerSpots.forEach((k, i) => {
+      stemMesh.setMatrixAt(i, matrix.compose(v.set(k.x, k.y, k.z), q.identity(), sc.set(1, k.h, 1)));
+      bloomMesh.setMatrixAt(i, matrix.compose(v.set(k.x, k.y + k.h, k.z), q.identity(), sc.set(1, 0.8, 1)));
+      bloomMesh.setColorAt(i, color.set(k.c));
+    });
     const bladesPerClump = blades.map((b) => b.clump);
 
     // Waterfalls where the river leaves the island at each end.
@@ -407,7 +448,7 @@ export function River() {
     for (let i = 0; i < MAX_DROPS; i++) dropMesh.setMatrixAt(i, hidden);
     const drops: (Drop | null)[] = Array(MAX_DROPS).fill(null);
 
-    return { time, water, bed, banks, pebbleMesh, boulders, boulderMesh, reedMesh, bladesPerClump, falls, foams, dropMesh, drops };
+    return { time, water, bed, banks, pebbleMesh, boulders, boulderMesh, reedMesh, bladesPerClump, slopeRockMesh, stemMesh, bloomMesh, falls, foams, dropMesh, drops };
   }, []);
 
   // Fewer reed clumps on lower tiers: the blades are ordered by clump, so draw a prefix.
@@ -415,7 +456,17 @@ export function River() {
     const keep = REED_CLUSTERS[tier];
     const count = scene.bladesPerClump.findIndex((c) => c >= keep);
     scene.reedMesh.count = count === -1 ? scene.bladesPerClump.length : count;
+    scene.slopeRockMesh.count = Math.min(SLOPE_ROCKS[tier], scene.slopeRockMesh.instanceMatrix.count);
+    scene.stemMesh.count = scene.bloomMesh.count = Math.min(BANK_FLOWERS[tier], scene.stemMesh.instanceMatrix.count);
   }, [scene, tier]);
+
+  // free the GPU buffers when the river goes away
+  useEffect(
+    () => () => {
+      for (const m of [scene.water, scene.bed, scene.banks, scene.pebbleMesh, scene.boulderMesh, scene.reedMesh, scene.slopeRockMesh, scene.stemMesh, scene.bloomMesh, scene.falls, scene.foams]) m.geometry.dispose();
+    },
+    [scene],
+  );
 
   const tmp = useMemo(() => ({ m: new THREE.Matrix4(), q: new THREE.Quaternion(), p: new THREE.Vector3(), s: new THREE.Vector3() }), []);
 
@@ -491,7 +542,7 @@ export function River() {
       {/* boulders are solid; pebbles and reeds are just looks */}
       <RigidBody type="fixed" colliders={false} userData={{ material: 'stone' }}>
         {scene.boulders.map((b, i) => (
-          <BallCollider key={i} args={[b.s * 0.9]} position={[b.x, b.s * 0.3, b.z]} />
+          <BallCollider key={i} args={[b.s * 0.9]} position={[b.x, b.y + b.s * 0.3, b.z]} />
         ))}
       </RigidBody>
       <primitive object={scene.bed} />
@@ -500,6 +551,9 @@ export function River() {
       <primitive object={scene.pebbleMesh} />
       <primitive object={scene.boulderMesh} />
       <primitive object={scene.reedMesh} />
+      <primitive object={scene.slopeRockMesh} />
+      <primitive object={scene.stemMesh} />
+      <primitive object={scene.bloomMesh} />
       <primitive object={scene.falls} />
       <primitive object={scene.foams} />
       <primitive object={scene.dropMesh} />

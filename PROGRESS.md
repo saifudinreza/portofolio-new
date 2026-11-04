@@ -163,6 +163,17 @@ _Add reproducible bugs, blockers, and relevant browser/device details here._
 - **Pemecahan chunk dicoba dan dibatalkan:** `manualChunks` (three / r3f / rapier) membuat `index.html` memuat `physics-wasm` (842 kB gzip) dan `r3f` (479 kB gzip) lebih dulu lewat modulepreload, merusak pemuatan malas (halaman awal tidak boleh mengunduh 3D). Rapier + WASM base64 ternyata bagian terbesar chunk Scene (±2,2 MB dari 3,5 MB). Ukuran total gzip tidak berubah, jadi tidak dipakai.
 - **Menunggu pemilik:** FPS di GPU asli (Low/Medium/High di Home, Projects, sungai; desktop dan HP) lewat `?stats`, lalu optimasi yang terbukti (instancing zona, bayangan benda kecil).
 
+### 2026-11-05 (M3 / #37, beban dunia final)
+Setelah semua fitur visual ([01] sampai [09]) dan M4 sampai M6 ter-merge, beban di Home (`?stats`, headless, tanpa GPU sehingga FPS tidak diukur):
+
+| Tier | Draw call | Segitiga | Dulu (awal audit) |
+|---|---|---|---|
+| Low | 244 | 897k | 209 / 523k |
+| Medium | 448 | 1,62 juta | 378 / 920k |
+| High | 469 | 1,83 juta | 398 / 1,07 juta |
+
+Penyumbang terbesar di High: Grass 656k, Details 173k, River + bridge 149k, Trees 148k, Decor 99k, Ground 65k; Zones 223 mesh (belum di-instance). Beban sudah sekitar 1,7 kali lipat dari awal, jadi pengukuran FPS di GPU asli (Low/Medium/High; desktop dan HP; Home, Projects, sungai, air terjun) sekarang paling mendesak. Kandidat optimasi sesuai bukti nanti: jumlah dan density rumput, instancing Zones, bayangan benda kecil.
+
 ### 2026-11-05 (M7 / #41, bagian otomatis)
 Lingkungan uji: hanya Edge dan Brave (keduanya Chromium) terpasang; Chrome dan Firefox tidak ada, dan tidak ada HP asli. Semua uji memakai build produksi (`vite preview`), GPU software (SwiftShader), sehingga FPS tidak bermakna.
 - **Tautan eksternal:** 14 tautan (6 proyek x live/source dari `profile.ts`, profil GitHub, LinkedIn, repo, situs live) menjawab HTTP 200 (LinkedIn 200 dengan user-agent browser; `mailto:` tidak bisa dicek otomatis).

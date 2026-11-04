@@ -54,6 +54,19 @@ export const contactPads: [number, number][] = [[18, 30], [26, 30], [34, 30]];
  * river's east reach (z about 9) and of the Projects field. A box: x from `x - hx` to `x + hx`, z from `z - hz` to `z + hz`.
  */
 export const waterfallZone = { x: 62, z: -12, hx: 10, hz: 10 };
+
+/** The lighthouse on the south-west coast (built in Scenery.tsx). */
+export const lighthouse = { x: -62, z: 56 };
+
+/**
+ * Hidden places off the main roads. The two at the ends of the new roads get a cairn with a flag; the lighthouse is
+ * the third. Driving within `radius` metres discovers one, and finding all of them is the "World traveler" achievement.
+ */
+export const secretPlaces = [
+  { id: 'lookout', label: 'Lookout point', x: 44, z: -56, radius: 7, cairn: true },
+  { id: 'beach', label: 'Sunset beach', x: 58, z: 48, radius: 7, cairn: true },
+  { id: 'lighthouse', label: 'Lighthouse coast', x: lighthouse.x, z: lighthouse.z, radius: 10, cairn: false },
+];
 /** Koi pond between the About and Contact roads; an ellipse with radii rx (x) and rz (z). */
 export const pond = { x: -1.5, z: 27, rx: 5.5, rz: 3.8, water: 0.22 };
 
@@ -147,6 +160,7 @@ const keepClear: [number, number, number][] = [
   [-8, 10, 5], // ramp
   [9, 16, 5], // cones
   [waterfallZone.x, waterfallZone.z, 13], // reserved for the edge waterfall
+  ...secretPlaces.filter((p) => p.cairn).map((p): [number, number, number] => [p.x, p.z, 5]), // the cairns
 ];
 
 // ---------- river and bridge ----------
@@ -335,3 +349,43 @@ export const npcRoutes: NpcRoute[] = [
   // someone enjoying the koi pond
   { side: 0, sit: true, points: [{ x: -7.1, z: 30.1, look: [pond.x, pond.z] }] },
 ];
+
+// ---------- collectible gems ----------
+
+export const GEM_TOTAL = 12;
+export type GemSpot = { id: string; x: number; z: number; y: number };
+
+/**
+ * Twelve glowing gems, the same on every visit: three by the hidden places, the rest spread as evenly as possible
+ * over open meadow at least 6 m from any road (farthest-point sampling). Every fourth one hovers 2 m up, so only a
+ * jump reaches it.
+ */
+function buildGems(): GemSpot[] {
+  const out: GemSpot[] = secretPlaces.map((p) => ({ id: 'g-' + p.id, x: p.x + 2.4, z: p.z + 1.6, y: 0.9 }));
+  const r = rng(2024);
+  const candidates: [number, number][] = [];
+  for (let i = 0; i < 1500 && candidates.length < 300; i++) {
+    const x = (r() * 2 - 1) * (WORLD_SIZE / 2 - 6);
+    const z = (r() * 2 - 1) * (WORLD_SIZE / 2 - 6);
+    if (!isClear(x, z, 6) || pondDistance(x, z) < 5 || riverDistance(x, z) < 8) continue;
+    if (Object.values(zones).some((zn) => Math.hypot(x - zn.spawn[0], z - zn.spawn[1]) < 14)) continue;
+    candidates.push([x, z]);
+  }
+  const chosen = out.map((g): [number, number] => [g.x, g.z]);
+  while (out.length < GEM_TOTAL && candidates.length) {
+    let best = 0;
+    let bestD = -1;
+    candidates.forEach(([x, z], i) => {
+      const d = Math.min(1e9, ...chosen.map(([cx, cz]) => Math.hypot(x - cx, z - cz)));
+      if (d > bestD) {
+        bestD = d;
+        best = i;
+      }
+    });
+    const [x, z] = candidates.splice(best, 1)[0];
+    chosen.push([x, z]);
+    out.push({ id: 'g-' + out.length, x, z, y: out.length % 4 === 0 ? 2.1 : 0.9 });
+  }
+  return out;
+}
+export const gemSpots = buildGems();

@@ -3,7 +3,7 @@ import { CuboidCollider, CylinderCollider, RigidBody } from '@react-three/rapier
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
-import { WORLD_SIZE, scaled, distanceToSegment, isClear, pondDistance, rng, trails } from './layout';
+import { WORLD_SIZE, lighthouse, scaled, distanceToSegment, isClear, pondDistance, rng, trails } from './layout';
 import { trackLamp } from './dayCycle';
 import { fallenLeafMap } from './decorTextures';
 import { woodMap } from './textures';
@@ -21,7 +21,7 @@ const open = (x: number, z: number, margin = 3.2) =>
   Math.abs(x) < HALF - 3 && Math.abs(z) < HALF - 3 && isClear(x, z, margin) && pondDistance(x, z) > 1.8 && trails.every((t) => distanceToSegment(x, z, t) > 1.8);
 
 /** Lighthouse position, out on the south-west coast of the enlarged island; clear of the river, roads and every zone. */
-const LIGHTHOUSE = { x: -62, z: 56 };
+const LIGHTHOUSE = lighthouse;
 
 const mat = (x: number, y: number, z: number, yaw: number, s: number | THREE.Vector3 = 1) =>
   new THREE.Matrix4().compose(new THREE.Vector3(x, y, z), new THREE.Quaternion().setFromAxisAngle(up, yaw), typeof s === 'number' ? new THREE.Vector3(s, s, s) : s);

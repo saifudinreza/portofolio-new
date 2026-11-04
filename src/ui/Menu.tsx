@@ -164,7 +164,7 @@ function AchievementsPanel() {
   const a = useAchievements();
   const skin = useStore((s) => s.carSkin);
   const setSkin = useStore((s) => s.setCarSkin);
-  const progress: Partial<Record<AchievementId, number>> = { 'all-projects': a.projects, 'all-zones': a.zones, jumper: a.jumps, honk: a.honks };
+  const progress: Partial<Record<AchievementId, number>> = { 'all-projects': a.projects, 'all-zones': a.zones, jumper: a.jumps, honk: a.honks, collector: a.gems, traveler: a.places };
   const done = ACHIEVEMENTS.filter((x) => a.unlocked[x.id]).length;
   return (
     <>
@@ -244,6 +244,7 @@ function AboutSitePanel() {
       <h3>Credits</h3>
       <ul className="menu-list">
         <li>Fonts: Archivo Black and DM Sans (SIL Open Font License)</li>
+        <li>Music: generated live in your browser (no audio files). Licensed tracks put in public/audio/ play instead.</li>
       </ul>
       <p>
         <a className="btn small repo" href={REPO_URL} target="_blank" rel="noopener noreferrer">Source code on GitHub</a>

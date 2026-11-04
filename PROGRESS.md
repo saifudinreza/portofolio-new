@@ -35,7 +35,7 @@
 | 3 — Performance | ISSUE-017, 018, 016 | IN PROGRESS: leak audit done, FPS pengukuran menunggu pemilik | #37 |
 | 4 — Driving | ISSUE-004 to 007 | DONE kecuali playtest manusia | #38 |
 | 5 — Portfolio | ISSUE-008 to 009 | DONE kecuali thumbnail proyek | #39 |
-| 6 — Exploration | ISSUE-010 to 013 | TODO | #40 |
+| 6 — Exploration | ISSUE-010 to 013 | DONE kecuali musik berlisensi dan playtest | #40 |
 | 7 — Device testing | ISSUE-019, 020 | TODO | #41 |
 
 ---
@@ -162,6 +162,13 @@ _Add reproducible bugs, blockers, and relevant browser/device details here._
 - **Kebocoran kecil yang tersisa:** +1 tekstur GPU (kecil) setiap kali tier naik dari Low ke Medium (tidak terjadi Medium ↔ High). Bukan `scene.environment` (sudah dicoba dibuang, tidak berpengaruh); kemungkinan di dalam drei `Environment`. Diabaikan: auto-quality hanya flip-flop maksimum 4 kali lalu berhenti.
 - **Pemecahan chunk dicoba dan dibatalkan:** `manualChunks` (three / r3f / rapier) membuat `index.html` memuat `physics-wasm` (842 kB gzip) dan `r3f` (479 kB gzip) lebih dulu lewat modulepreload, merusak pemuatan malas (halaman awal tidak boleh mengunduh 3D). Rapier + WASM base64 ternyata bagian terbesar chunk Scene (±2,2 MB dari 3,5 MB). Ukuran total gzip tidak berubah, jadi tidak dipakai.
 - **Menunggu pemilik:** FPS di GPU asli (Low/Medium/High di Home, Projects, sungai; desktop dan HP) lewat `?stats`, lalu optimasi yang terbukti (instancing zona, bayangan benda kecil).
+
+### 2026-11-04 (M6 / #40)
+- **Gem (koleksi):** 12 gem bercahaya (`world/Collectibles.tsx`, satu InstancedMesh untuk gem dan satu untuk berkas cahaya, tanpa berkas di Low). Posisi deterministik dari `layout.ts` (`gemSpots`): 3 di tempat tersembunyi, sisanya tersebar merata (farthest-point sampling) minimal 6 m dari jalan (jarak ke jalan terdekat 9 sampai 57 m); setiap gem ke-4 melayang 2 m sehingga hanya bisa diambil sambil melompat. Pengambilan lewat cek jarak ke mobil tiap frame (12 gem, murah), suara chime, dan toast "Gem found: n of 12".
+- **Tempat tersembunyi:** 3 (`secretPlaces`): ujung dua jalan baru (cairn batu dengan bendera) dan pantai mercusuar. Mendekat membuka tempat, bunyi, dan toast "Discovered: ...". Mercusuar dipindah ke `layout.ts` (`lighthouse`) agar dipakai bersama.
+- **Achievement baru:** "Gem hunter" (12 gem) dan "World traveler" (3 tempat), dengan progres di tab Achievements. Disimpan di localStorage bersama achievement lain; id yang sudah tidak ada dibuang saat memuat; "Reset progress" menghapusnya dan gem muncul kembali.
+- **Musik:** file lisensi belum ada, jadi tanpa file di `public/audio/` game memainkan musik generatif buatan kode di browser (akor C, Am, F, G dengan pad, arpeggio, lonceng, dan delay). Ikut slider Music dan mute; file mp3 yang ditaruh di `public/audio/` otomatis menggantikannya.
+- **Diuji (headless, mobil dipalsukan lewat getter `carState`):** gem darat terambil, gem melayang tidak terambil dari tanah tetapi terambil saat `y` lompatan, 12/12 gem dan 3/3 tempat membuka kedua achievement, progres bertahan setelah refresh, reset menghapus semuanya. Musik: osilator bertambah sekitar 4 per detik dan berhenti saat mute (context suspended), tanpa error konsol. Tidak dites oleh manusia: kesulitan mencari gem dan kekerasan/kenyamanan musik.
 
 ### 2026-11-04 (M5 / #39)
 - **Keputusan:** Experience jadi zona sendiri (bukan papan di About), karena area About sedang dibangun ulang di issue lain. Lokasi: ujung barat jalan baru, pad di (-58, -6), spawn (-46, -6,8) di jalan menghadap area; ruang di sekitarnya dikosongkan lewat `keepClear`, jalan sambungan ditambahkan di akhir `roadSegments` (indeks gerbang circuit tidak berubah).

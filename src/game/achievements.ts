@@ -1,13 +1,13 @@
 import { create } from 'zustand';
 import { projects } from '../data/profile';
-import { zones, type CarSkin } from '../world/layout';
+import { gemSpots, secretPlaces, zones, type CarSkin } from '../world/layout';
 
 // Achievements live in their own small store (not the main one) so the game code can report events from
 // anywhere without an import cycle. Everything is saved in localStorage; storage can be blocked, so it never throws.
 
 export type AchievementId =
   | 'all-projects' | 'all-zones' | 'open-live' | 'airtime' | 'jumper' | 'speed' | 'wet' | 'honk' | 'abyss' | 'classic'
-  | 'circuit' | 'circuit-fast' | 'drift';
+  | 'circuit' | 'circuit-fast' | 'drift' | 'collector' | 'traveler';
 
 export type Achievement = {
   id: AchievementId;
@@ -20,6 +20,8 @@ export type Achievement = {
 };
 
 export const ZONE_COUNT = Object.keys(zones).length;
+export const GEM_COUNT = gemSpots.length;
+export const PLACE_COUNT = secretPlaces.length;
 export const JUMP_GOAL = 25;
 export const HONK_GOAL = 20;
 /** Boost top speed is 19 m/s; the car needs a moment of full boost on flat ground to get this close. */
@@ -43,6 +45,8 @@ export const ACHIEVEMENTS: Achievement[] = [
   { id: 'classic', title: 'Recruiter mode', description: 'Open the classic view.' },
   { id: 'circuit', title: 'Lap of honour', description: 'Finish a time-trial lap: drive through the START gate on the Skills road.' },
   { id: 'drift', title: 'Sideways', description: `Drift for ${DRIFT_GOAL} seconds in one go: hold B or Ctrl and steer at speed.` },
+  { id: 'collector', title: 'Gem hunter', description: `Find all ${GEM_COUNT} glowing gems. Some hide far from the roads, and some only a jump can reach.`, goal: GEM_COUNT },
+  { id: 'traveler', title: 'World traveler', description: `Discover all ${PLACE_COUNT} hidden places: the ends of the two long roads, and the lighthouse.`, goal: PLACE_COUNT },
   { id: 'circuit-fast', title: 'Speed demon', description: `Finish a lap in under ${CIRCUIT_FAST_SECONDS} seconds.` },
 ];
 
@@ -56,10 +60,10 @@ export const SKIN_RULES: Record<CarSkin, { label: string; hint: string; unlocked
 
 const KEY = 'zare-world-achievements';
 
-type Saved = { unlocked: AchievementId[]; projects: string[]; zones: string[]; jumps: number; honks: number; seconds: number };
+type Saved = { unlocked: AchievementId[]; projects: string[]; zones: string[]; gems: string[]; places: string[]; jumps: number; honks: number; seconds: number };
 
 function load(): Saved {
-  const empty: Saved = { unlocked: [], projects: [], zones: [], jumps: 0, honks: 0, seconds: 0 };
+  const empty: Saved = { unlocked: [], projects: [], zones: [], gems: [], places: [], jumps: 0, honks: 0, seconds: 0 };
   try {
     const raw = JSON.parse(localStorage.getItem(KEY) ?? '{}') as Partial<Saved>;
     const list = (v: unknown) => (Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : []);
@@ -68,6 +72,9 @@ function load(): Saved {
       unlocked: list(raw.unlocked).filter((id): id is AchievementId => ACHIEVEMENTS.some((a) => a.id === id)),
       projects: list(raw.projects),
       zones: list(raw.zones),
+      // only ids that still exist, so a changed layout can never leave a gem that cannot be found
+      gems: list(raw.gems).filter((id) => gemSpots.some((g) => g.id === id)),
+      places: list(raw.places).filter((id) => secretPlaces.some((p) => p.id === id)),
       jumps: num(raw.jumps),
       honks: num(raw.honks),
       seconds: num(raw.seconds),
@@ -82,6 +89,8 @@ const saved = load();
 const unlockedSet = new Set<AchievementId>(saved.unlocked);
 const projectSet = new Set(saved.projects);
 const zoneSet = new Set(saved.zones);
+const gemSet = new Set(saved.gems);
+const placeSet = new Set(saved.places);
 let jumps = saved.jumps;
 let honks = saved.honks;
 let seconds = saved.seconds;
@@ -89,7 +98,7 @@ let lastSavedSeconds = seconds;
 
 function persist() {
   try {
-    const data: Saved = { unlocked: [...unlockedSet], projects: [...projectSet], zones: [...zoneSet], jumps, honks, seconds };
+    const data: Saved = { unlocked: [...unlockedSet], projects: [...projectSet], zones: [...zoneSet], gems: [...gemSet], places: [...placeSet], jumps, honks, seconds };
     localStorage.setItem(KEY, JSON.stringify(data));
   } catch {
     // private mode or blocked storage: progress just won't be remembered
@@ -100,23 +109,29 @@ type View = {
   unlocked: Record<string, true>;
   projects: number;
   zones: number;
+  gems: number;
+  places: number;
   jumps: number;
   honks: number;
   seconds: number;
   /** the achievement to announce right now */
   toast: Achievement | null;
+  /** a small one-line message (a gem found, a place discovered) */
+  note: string | null;
 };
 
-const snapshot = (): Omit<View, 'toast'> => ({
+const snapshot = (): Omit<View, 'toast' | 'note'> => ({
   unlocked: Object.fromEntries([...unlockedSet].map((id) => [id, true as const])),
   projects: projectSet.size,
   zones: zoneSet.size,
+  gems: gemSet.size,
+  places: placeSet.size,
   jumps,
   honks,
   seconds: Math.floor(seconds),
 });
 
-export const useAchievements = create<View>(() => ({ ...snapshot(), toast: null }));
+export const useAchievements = create<View>(() => ({ ...snapshot(), toast: null, note: null }));
 
 const refresh = () => useAchievements.setState(snapshot());
 
@@ -134,6 +149,36 @@ export function unlock(id: AchievementId) {
 }
 
 export const isUnlocked = (id: AchievementId) => unlockedSet.has(id);
+
+let noteTimer = 0;
+function announce(note: string) {
+  useAchievements.setState({ note });
+  window.clearTimeout(noteTimer);
+  noteTimer = window.setTimeout(() => useAchievements.setState({ note: null }), 2600);
+}
+
+export const hasGem = (id: string) => gemSet.has(id);
+export const hasPlace = (id: string) => placeSet.has(id);
+
+/** A gem was picked up. Saved at once, so it is still gone after a refresh. */
+export function collectGem(id: string) {
+  if (gemSet.has(id)) return;
+  gemSet.add(id);
+  persist();
+  refresh();
+  announce(`Gem found: ${gemSet.size} of ${GEM_COUNT}`);
+  if (gemSet.size >= GEM_COUNT) unlock('collector');
+}
+
+/** The car came close to a hidden place for the first time. */
+export function discoverPlace(id: string, label: string) {
+  if (placeSet.has(id)) return;
+  placeSet.add(id);
+  persist();
+  refresh();
+  announce(`Discovered: ${label} (${placeSet.size} of ${PLACE_COUNT})`);
+  if (placeSet.size >= PLACE_COUNT) unlock('traveler');
+}
 
 export function visitProject(id: string) {
   if (projectSet.has(id)) return;
@@ -179,7 +224,9 @@ export function resetAchievements() {
   unlockedSet.clear();
   projectSet.clear();
   zoneSet.clear();
+  gemSet.clear();
+  placeSet.clear();
   jumps = honks = seconds = lastSavedSeconds = 0;
   persist();
-  useAchievements.setState({ ...snapshot(), toast: null });
+  useAchievements.setState({ ...snapshot(), toast: null, note: null });
 }

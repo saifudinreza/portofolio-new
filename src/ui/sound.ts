@@ -22,6 +22,73 @@ const TRACKS = ['/audio/music-1.mp3', '/audio/music-2.mp3'];
 const MUSIC_LEVEL = 0.25; // relative to the master volume, before the Music slider
 const MUSIC_FADE_IN = 2;
 
+/**
+ * Background music made in code, used when public/audio has no tracks: a slow loop of four soft chords (C, Am, F, G)
+ * with a pad, a plucked arpeggio on the chord tones, the odd bell, and a feedback delay for space. Notes are scheduled
+ * a second ahead and every note is a short-lived oscillator, so nothing piles up. It runs on the audio clock: when the
+ * context is suspended (muted, hidden tab, classic view) the music simply waits.
+ */
+function startGenerative(c: AudioContext, out: AudioNode) {
+  const bus = c.createGain();
+  bus.gain.value = 1.4;
+  const delay = c.createDelay(1);
+  delay.delayTime.value = 0.43;
+  const feedback = c.createGain();
+  feedback.gain.value = 0.35;
+  const tone = c.createBiquadFilter();
+  tone.type = 'lowpass';
+  tone.frequency.value = 2200;
+  const wet = c.createGain();
+  wet.gain.value = 0.35;
+  bus.connect(out);
+  bus.connect(delay);
+  delay.connect(tone);
+  tone.connect(feedback).connect(delay);
+  tone.connect(wet).connect(out);
+
+  const BEAT = 60 / 70;
+  const hz = (midi: number) => 440 * 2 ** ((midi - 69) / 12);
+  const chords = [[48, 55, 59, 64], [45, 52, 57, 60], [41, 48, 52, 57], [43, 50, 55, 59]];
+  const voice = (type: OscillatorType, freq: number, t: number, length: number, peak: number, attack: number, release: number, detune = 0) => {
+    const o = c.createOscillator();
+    o.type = type;
+    o.frequency.value = freq;
+    o.detune.value = detune;
+    const g = c.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(peak, t + attack);
+    g.gain.setValueAtTime(peak, t + Math.max(attack, length - release));
+    g.gain.exponentialRampToValueAtTime(0.0001, t + length);
+    o.connect(g).connect(bus);
+    o.start(t);
+    o.stop(t + length + 0.05);
+  };
+  let next = c.currentTime + 0.3;
+  let bar = 0;
+  let step = 0;
+  const schedule = () => {
+    while (next < c.currentTime + 1.2) {
+      const chord = chords[bar % chords.length];
+      if (step === 0) {
+        for (const m of chord) {
+          voice('triangle', hz(m), next, BEAT * 4.4, 0.03, 1.2, 1.6, -6);
+          voice('triangle', hz(m), next, BEAT * 4.4, 0.03, 1.2, 1.6, 6);
+        }
+        if (bar % 2 === 1) voice('sine', hz(chord[0] + 36 + [0, 2, 4, 7, 9][Math.floor(Math.random() * 5)]), next + BEAT, 2.4, 0.05, 0.01, 2.2);
+      }
+      if (Math.random() < 0.72) {
+        const m = chord[Math.floor(Math.random() * chord.length)] + (Math.random() < 0.3 ? 24 : 12);
+        voice('sine', hz(m), next, 0.8, 0.075, 0.01, 0.75);
+      }
+      next += BEAT / 2;
+      step = (step + 1) % 8;
+      if (step === 0) bar++;
+    }
+  };
+  schedule();
+  window.setInterval(schedule, 250);
+}
+
 function createMusic(c: AudioContext, dest: AudioNode) {
   const el = new Audio();
   el.preload = 'auto';
@@ -29,7 +96,7 @@ function createMusic(c: AudioContext, dest: AudioNode) {
   gain.gain.value = 0;
   c.createMediaElementSource(el).connect(gain).connect(dest);
   const broken = new Set<number>();
-  const state = { el, gain, dead: false, track: 0 };
+  const state = { el, gain, dead: false, generative: false, track: 0 };
 
   const play = (i: number) => {
     // next track that hasn't failed yet
@@ -44,6 +111,15 @@ function createMusic(c: AudioContext, dest: AudioNode) {
     if (pick < 0) {
       state.dead = true;
       el.removeAttribute('src');
+      // No (working) music files: play the tune made in code instead, once.
+      if (!state.generative) {
+        state.generative = true;
+        startGenerative(c, gain);
+        const t = c.currentTime;
+        gain.gain.cancelScheduledValues(t);
+        gain.gain.setValueAtTime(0, t);
+        gain.gain.linearRampToValueAtTime(MUSIC_LEVEL * useStore.getState().musicVolume, t + MUSIC_FADE_IN);
+      }
       return;
     }
     state.track = pick;
@@ -456,6 +532,35 @@ function createAmbience(c: AudioContext, dest: AudioNode) {
 }
 
 /** A short airy sweep for the intro camera. The context may still be resuming right after "Start driving", so it waits for it. */
+/** A bright two-note chime: a gem. */
+export const pickup = () => chime([880, 1318], 0.1, 0.09);
+/** A rising four-note figure: a hidden place found. */
+export const discoverChime = () => chime([523, 659, 784, 1046], 0.1, 0.11);
+
+function chime(freqs: number[], level: number, step: number) {
+  if (!ctx || !master) return;
+  const c = ctx;
+  const out = master;
+  const play = () => {
+    const now = c.currentTime;
+    freqs.forEach((f, i) => {
+      const o = c.createOscillator();
+      o.type = 'sine';
+      o.frequency.value = f;
+      const g = c.createGain();
+      const t0 = now + i * step;
+      g.gain.setValueAtTime(0.0001, t0);
+      g.gain.exponentialRampToValueAtTime(level, t0 + 0.012);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0 + 0.5);
+      o.connect(g).connect(out);
+      o.start(t0);
+      o.stop(t0 + 0.55);
+    });
+  };
+  if (c.state === 'running') play();
+  else void c.resume().then(play).catch(() => {});
+}
+
 export function whoosh() {
   if (!ctx || !master) return;
   const c = ctx;

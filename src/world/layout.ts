@@ -153,11 +153,26 @@ const keepClear: [number, number, number][] = [
 const riverControl: [number, number][] = [
   [4.2, -90], [4.6, -72], [5, -54], [5.5, -40], [6.5, -28], [7.5, -18], [10, -8], [13, -1], [16.5, 5], [23, 8.8], [32, 9.4], [41, 8.6], [54, 9.6], [68, 9.2], [86, 9.8],
 ];
-/** Half the width of the water; the sandy bank reaches about 1.6 m further. */
+/** Half the width of the water; the sloping bank reaches this much further, from ground level down to the water line. */
 export const RIVER_HALF_WIDTH = 2.6;
-export const RIVER_BANK = 1.6;
-/** Height of the water surface above the ground (the bed is a decal on the flat ground, like the pond). */
-export const RIVER_WATER = 0.2;
+export const RIVER_BANK = 2.4;
+/** The river sits in a trench: the water surface is below the ground (y = 0), the bed lower still. */
+export const RIVER_WATER = -0.3;
+/** Terrain height where the bank meets the water, and in the middle of the bed. */
+export const RIVER_BED_EDGE = -0.36;
+export const RIVER_BED = -0.62;
+
+/** Terrain height of the river trench at `d` metres from the river's centreline (0 beyond the bank). */
+export function riverBedHeight(d: number) {
+  const top = RIVER_HALF_WIDTH + RIVER_BANK;
+  if (d >= top) return 0;
+  if (d > RIVER_HALF_WIDTH) {
+    const t = (top - d) / RIVER_BANK; // 0 at the top of the bank, 1 at the water line
+    return RIVER_BED_EDGE * t * t * (3 - 2 * t);
+  }
+  const t = d / RIVER_HALF_WIDTH;
+  return RIVER_BED_EDGE + (RIVER_BED - RIVER_BED_EDGE) * (1 - t * t);
+}
 
 export type RiverPoint = { x: number; z: number; s: number; tx: number; tz: number };
 
@@ -222,6 +237,9 @@ export function riverDistance(x: number, z: number) {
   const bottom = g[(j + 1) * GRID_N + i] * (1 - fx) + g[(j + 1) * GRID_N + i + 1] * fx;
   return top * (1 - fz) + bottom * fz;
 }
+
+/** Height of the terrain at (x, z): flat ground (0) except the river trench. The ground mesh and its collider are built from this. */
+export const terrainHeight = (x: number, z: number) => riverBedHeight(riverDistance(x, z));
 
 /** Where the Home → Projects road crosses the river: the bridge sits there, lined up with the road. */
 function findBridge() {

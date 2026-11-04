@@ -1,13 +1,14 @@
-import { useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
-import { CuboidCollider, RigidBody } from '@react-three/rapier';
+import { CuboidCollider, HeightfieldCollider, RigidBody } from '@react-three/rapier';
 import * as THREE from 'three';
-import { OLD_WORLD_SIZE, RIVER_HALF_WIDTH, WORLD_SIZE, palette, riverDistance, roadSegments } from './layout';
+import { OLD_WORLD_SIZE, RIVER_BANK, RIVER_HALF_WIDTH, RIVER_BED, WORLD_SIZE, palette, riverDistance, roadSegments } from './layout';
 import { carState } from './carState';
 import { daySample } from './dayCycle';
 import { Text } from '@react-three/drei';
 import { BODY_FONT, DISPLAY_FONT, GroundText, Signboard } from './common';
 import { useStore } from '../store';
+import { TERRAIN_N, terrainGeometry, terrainHeights } from './terrain';
 import { groundColorMap, groundNormalMap, meadowMask, roadMap } from './textures';
 
 const HALF = WORLD_SIZE / 2;
@@ -83,10 +84,18 @@ diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.12, 0.2, 0.06) * (0.6 + 0.6 * sh
 }
 
 export function Ground() {
+  // The ground is flat except for the river trench, so the surface and its collider are built from the same heights.
+  const { heights, geometry, scale } = useMemo(() => {
+    const heights = terrainHeights();
+    return { heights, geometry: terrainGeometry(heights), scale: { x: WORLD_SIZE, y: 1, z: WORLD_SIZE } };
+  }, []);
+  useEffect(() => () => geometry.dispose(), [geometry]);
   return (
     <>
       <RigidBody type="fixed" colliders={false} friction={1} userData={{ material: 'ground' }}>
-        <CuboidCollider args={[HALF, 1, HALF]} position={[0, -1, 0]} />
+        <HeightfieldCollider args={[TERRAIN_N, TERRAIN_N, heights, scale]} />
+        {/* a slab just under the river bed, so nothing can ever drop through the surface */}
+        <CuboidCollider args={[HALF, 1, HALF]} position={[0, RIVER_BED - 1.1, 0]} />
         {/* invisible walls around the island */}
         <CuboidCollider args={[HALF, 3, 0.5]} position={[0, 2, -HALF]} />
         <CuboidCollider args={[HALF, 3, 0.5]} position={[0, 2, HALF]} />
@@ -94,8 +103,7 @@ export function Ground() {
         <CuboidCollider args={[0.5, 3, HALF]} position={[HALF, 2, 0]} />
       </RigidBody>
       {/* sandy top with a subtle normal map; the rocky cliffs (Atmosphere) hide the sides */}
-      <mesh position={[0, 0, 0]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
-        <planeGeometry args={[WORLD_SIZE, WORLD_SIZE]} />
+      <mesh geometry={geometry} receiveShadow>
         <meshStandardMaterial
           color={palette.ground}
           roughness={1}
@@ -105,7 +113,7 @@ export function Ground() {
           onBeforeCompile={meadowShader}
         />
       </mesh>
-      <mesh position={[0, -1.6, 0]}>
+      <mesh position={[0, -2.4, 0]}>
         <boxGeometry args={[WORLD_SIZE - 0.1, 3.18, WORLD_SIZE - 0.1]} />
         <meshStandardMaterial color={palette.groundEdge} roughness={1} />
       </mesh>
@@ -128,7 +136,8 @@ function dryStretches([x1, z1, x2, z2]: [number, number, number, number]) {
   let start = -1;
   for (let k = 0; k <= steps; k++) {
     const t = k / steps;
-    const dry = riverDistance(x1 + (x2 - x1) * t, z1 + (z2 - z1) * t) > RIVER_HALF_WIDTH + 0.5;
+    // the road stops where the bank starts to slope (the bridge's ramps carry it from there)
+    const dry = riverDistance(x1 + (x2 - x1) * t, z1 + (z2 - z1) * t) > RIVER_HALF_WIDTH + RIVER_BANK + 0.2;
     if (dry && start < 0) start = t;
     if ((!dry || k === steps) && start >= 0) {
       const end = dry ? t : (k - 1) / steps;

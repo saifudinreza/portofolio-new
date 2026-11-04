@@ -19,6 +19,7 @@ import { Trees } from './Trees';
 import { Grass } from './Grass';
 import { Pond } from './Pond';
 import { River } from './River';
+import { RiverProps } from './RiverProps';
 import { Bridge } from './Bridge';
 import { Npcs } from './Npc';
 import { ImpactParticles } from './Impacts';
@@ -103,6 +104,7 @@ export function Experience({ debug = false }: { debug?: boolean }) {
           <P n="Pond"><Pond /></P>
           <P n="River + bridge">
             <River />
+            <RiverProps />
             <Bridge />
           </P>
           <P n="People"><Npcs /></P>

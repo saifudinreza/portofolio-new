@@ -104,6 +104,9 @@ export const circuitGates: [number, number, number][] = [
   onRoad(4, 0.3), // back towards Home
 ];
 
+/** 0.1..1: how lush the meadow is at (x, z). A smooth low-frequency field, shared by the grass scatter and the ground tint. */
+export const meadowField = (x: number, z: number) => 0.55 + 0.45 * Math.sin(x * 0.21 + Math.sin(z * 0.17) * 2) * Math.cos(z * 0.19 - x * 0.07);
+
 export function distanceToSegment(x: number, z: number, [x1, z1, x2, z2]: [number, number, number, number]) {
   const dx = x2 - x1;
   const dz = z2 - z1;

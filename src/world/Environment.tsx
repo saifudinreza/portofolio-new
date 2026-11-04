@@ -8,7 +8,7 @@ import { daySample } from './dayCycle';
 import { Text } from '@react-three/drei';
 import { BODY_FONT, DISPLAY_FONT, GroundText, Signboard } from './common';
 import { useStore } from '../store';
-import { groundColorMap, groundNormalMap, roadMap } from './textures';
+import { groundColorMap, groundNormalMap, meadowMask, roadMap } from './textures';
 
 const HALF = WORLD_SIZE / 2;
 
@@ -61,6 +61,25 @@ export function Lights() {
   );
 }
 
+/** Olive tint on the sand wherever the meadow mask says grass grows (see meadowMask in textures.ts). */
+function meadowShader(shader: THREE.WebGLProgramParametersWithUniforms) {
+  shader.uniforms.uMeadow = { value: meadowMask() };
+  shader.vertexShader = shader.vertexShader
+    .replace('#include <common>', `#include <common>
+varying vec2 vMeadowUv;`)
+    .replace('#include <begin_vertex>', `#include <begin_vertex>
+vMeadowUv = (modelMatrix * vec4(position, 1.0)).xz / ${WORLD_SIZE.toFixed(1)} + 0.5;`);
+  shader.fragmentShader = shader.fragmentShader
+    .replace('#include <common>', `#include <common>
+varying vec2 vMeadowUv;
+uniform sampler2D uMeadow;`)
+    .replace('#include <map_fragment>', `#include <map_fragment>
+float meadow = texture2D(uMeadow, vMeadowUv).r;
+// olive soil, keeping the sand texture's light and dark variation
+float shade = dot(diffuseColor.rgb, vec3(0.33));
+diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.17, 0.25, 0.07) * (0.6 + 0.8 * shade), meadow * 0.95);`);
+}
+
 export function Ground() {
   return (
     <>
@@ -75,7 +94,14 @@ export function Ground() {
       {/* sandy top with a subtle normal map; the rocky cliffs (Atmosphere) hide the sides */}
       <mesh position={[0, 0, 0]} rotation={[-Math.PI / 2, 0, 0]} receiveShadow>
         <planeGeometry args={[WORLD_SIZE, WORLD_SIZE]} />
-        <meshStandardMaterial color={palette.ground} roughness={1} map={groundColorMap(24)} normalMap={groundNormalMap(24)} normalScale={new THREE.Vector2(0.35, 0.35)} />
+        <meshStandardMaterial
+          color={palette.ground}
+          roughness={1}
+          map={groundColorMap(24)}
+          normalMap={groundNormalMap(24)}
+          normalScale={new THREE.Vector2(0.35, 0.35)}
+          onBeforeCompile={meadowShader}
+        />
       </mesh>
       <mesh position={[0, -1.6, 0]}>
         <boxGeometry args={[WORLD_SIZE - 0.1, 3.18, WORLD_SIZE - 0.1]} />

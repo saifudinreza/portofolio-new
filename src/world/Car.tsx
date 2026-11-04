@@ -5,7 +5,7 @@ import * as THREE from 'three';
 import { input, readDriveInput, useStore } from '../store';
 import { inRiver, nearestZone, pondDistance, zones, type ZoneId } from './layout';
 import { AIRTIME_GOAL, SPEED_GOAL, addHonk, addJump, tickPlayTime, unlock, visitZone } from '../game/achievements';
-import { impact, updateCarAudio, updateListener, type SurfaceMaterial } from '../ui/sound';
+import { impact, updateAmbience, updateCarAudio, updateListener, type SurfaceMaterial } from '../ui/sound';
 import { emitImpact } from './impactQueue';
 import { CarModel } from './CarModel';
 import { carState } from './carState';
@@ -334,6 +334,7 @@ export function Car() {
     camera.getWorldDirection(tmpForward);
     tmpUp.set(0, 1, 0).applyQuaternion(camera.quaternion);
     updateListener(camera.position, tmpForward, tmpUp);
+    updateAmbience(pos.x, pos.z);
     updateCarAudio({
       x: pos.x,
       y: pos.y,

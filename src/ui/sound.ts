@@ -2,12 +2,14 @@
 // One context, one master gain: mute/volume, hidden tabs and the classic view all just move that gain
 // (then suspend the context), so nothing ever cuts off mid-waveform and pops.
 import { useStore } from '../store';
+import { WORLD_SIZE, riverDistance } from '../world/layout';
 
 export type Vec3 = { x: number; y: number; z: number };
 
 let ctx: AudioContext | null = null;
 let master: GainNode | null = null;
 let engine: ReturnType<typeof createEngine> | null = null;
+let ambience: ReturnType<typeof createAmbience> | null = null;
 let suspendTimer = 0;
 
 const audible = () => {
@@ -42,6 +44,12 @@ function unlock() {
     limiter.ratio.value = 8;
     master.connect(limiter).connect(ctx.destination);
     engine = createEngine(ctx, master);
+    try {
+      ambience = createAmbience(ctx, master);
+    } catch (err) {
+      // the background layer is optional: never let it take the engine and the rest of the audio down with it
+      console.error('Ambience audio failed to start', err);
+    }
     void ctx.resume();
   } catch {
     // Audio is a nice-to-have; ignore browsers that block it.
@@ -286,6 +294,102 @@ function createEngine(c: AudioContext, dest: AudioNode) {
 export function updateCarAudio(s: Parameters<ReturnType<typeof createEngine>['update']>[0]) {
   if (!ctx || ctx.state !== 'running' || !engine) return;
   engine.update(s);
+}
+
+// ---------- ambience ----------
+
+// Three layers of looping noise (surf, river, wind) whose loudness follows where the car is, plus the odd bird.
+// Everything is meant to sit far behind the engine: the three layers together never pass AMBIENCE_MAX.
+const AMBIENCE_MAX = 0.12;
+const SURF_MAX = 0.06;
+const RIVER_MAX = 0.04;
+const WIND_LEVEL = 0.015;
+const BIRD_LEVEL = 0.03;
+
+const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
+
+function createAmbience(c: AudioContext, dest: AudioNode) {
+  // the three layers at full level add up to 0.115, just under AMBIENCE_MAX
+  const bus = c.createGain();
+  bus.gain.value = Math.min(1, AMBIENCE_MAX / (SURF_MAX + RIVER_MAX + WIND_LEVEL));
+  bus.connect(dest);
+
+  const noise = (type: BiquadFilterType, freq: number, q: number) => {
+    const src = c.createBufferSource();
+    src.buffer = noiseBuffer(c, 4, () => 1);
+    src.loop = true;
+    const filter = c.createBiquadFilter();
+    filter.type = type;
+    filter.frequency.value = freq;
+    filter.Q.value = q;
+    const level = c.createGain();
+    level.gain.value = 0;
+    src.connect(filter).connect(level).connect(bus);
+    src.start();
+    return { filter, level };
+  };
+  const lfo = (hz: number, depth: number, target: AudioParam) => {
+    const o = c.createOscillator();
+    const g = c.createGain();
+    o.frequency.value = hz;
+    g.gain.value = depth;
+    o.connect(g).connect(target);
+    o.start();
+  };
+
+  const surf = noise('lowpass', 500, 0.7);
+  // the swell: the surf's own loudness breathes slowly (about every 7 s) around its level
+  const swell = c.createGain();
+  swell.gain.value = 0.7;
+  surf.filter.disconnect();
+  surf.filter.connect(swell).connect(surf.level);
+  lfo(1 / 7, 0.3, swell.gain);
+
+  const river = noise('bandpass', 1200, 0.7);
+  const wind = noise('bandpass', 400, 0.8);
+  lfo(0.06, 140, wind.filter.frequency); // the wind's pitch wanders slowly
+  wind.level.gain.value = WIND_LEVEL;
+
+  let nextBird = c.currentTime + 4;
+  const chirp = (now: number) => {
+    const notes = 2 + Math.floor(Math.random() * 3);
+    const base = 2200 + Math.random() * 1600;
+    for (let i = 0; i < notes; i++) {
+      const t = now + i * 0.11;
+      const o = c.createOscillator();
+      const g = c.createGain();
+      o.type = 'sine';
+      o.frequency.setValueAtTime(base * (1 + (i % 2) * 0.12), t);
+      o.frequency.exponentialRampToValueAtTime(base * (1.15 + (i % 2) * 0.12), t + 0.08);
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(BIRD_LEVEL, t + 0.015);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.08);
+      o.connect(g).connect(dest);
+      o.start(t);
+      o.stop(t + 0.1);
+    }
+  };
+
+  return {
+    update(x: number, z: number) {
+      const now = c.currentTime;
+      // surf near the island's edge: full inside 8 m of it, gone beyond 25 m
+      const edge = WORLD_SIZE / 2 - Math.max(Math.abs(x), Math.abs(z));
+      setParam(surf.level.gain, SURF_MAX * clamp01((25 - edge) / 17), now, 0.5);
+      // river: audible within 12 m of the water, full strength close to it
+      setParam(river.level.gain, RIVER_MAX * clamp01((12 - riverDistance(x, z)) / 9), now, 0.5);
+      if (now > nextBird) {
+        chirp(now);
+        nextBird = now + 4 + Math.random() * 6;
+      }
+    },
+  };
+}
+
+/** Called by the car every frame with its position. Does nothing until audio has been unlocked. */
+export function updateAmbience(x: number, z: number) {
+  if (!ctx || ctx.state !== 'running' || !ambience) return;
+  ambience.update(x, z);
 }
 
 // ---------- collisions ----------

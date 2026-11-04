@@ -34,6 +34,14 @@ const VEL_HISTORY = 6; // physics steps (~0.1 s at 60 Hz)
 
 const CAMERA_OFFSET = new THREE.Vector3(4, 14, 14);
 let zoom = 1;
+// Dragging the mouse swings the camera around the car; it eases back to the default angle after a pause.
+const UP = new THREE.Vector3(0, 1, 0);
+const ORBIT_SPEED = 0.005; // radians per pixel dragged
+const ORBIT_RETURN_MS = 3000;
+let orbit = 0;
+let lastDragAt = 0;
+let dragging = false;
+const tmpOffset = new THREE.Vector3();
 
 const tmpQuat = new THREE.Quaternion();
 const tmpForward = new THREE.Vector3();
@@ -54,6 +62,7 @@ export function Car() {
   const actor = useRef<Actor>({ x: 0, z: 0, radius: 0 });
   const { rapier, world } = useRapier();
   const camera = useThree((s) => s.camera);
+  const canvas = useThree((s) => s.gl.domElement);
   const viewport = useThree((s) => s.size);
   // Portrait phones see less of the world sideways, so pull the camera back.
   const aspectZoom = viewport.width / viewport.height < 0.8 ? 1.6 : 1;
@@ -127,6 +136,40 @@ export function Car() {
     window.addEventListener('wheel', onWheel, { passive: true });
     return () => window.removeEventListener('wheel', onWheel);
   }, []);
+
+  // Drag with the left mouse button on the canvas to orbit the camera. Only the canvas listens, so clicking
+  // the HUD never turns the view, and touch is left alone (it has the joystick). Steering stays relative to the car.
+  useEffect(() => {
+    const down = (e: PointerEvent) => {
+      if (e.pointerType !== 'mouse' || e.button !== 0) return;
+      dragging = true;
+      lastDragAt = performance.now();
+      canvas.setPointerCapture(e.pointerId);
+      canvas.style.cursor = 'grabbing';
+    };
+    const move = (e: PointerEvent) => {
+      if (!dragging) return;
+      orbit += e.movementX * ORBIT_SPEED;
+      lastDragAt = performance.now();
+    };
+    const up = () => {
+      dragging = false;
+      lastDragAt = performance.now();
+      canvas.style.cursor = '';
+    };
+    canvas.addEventListener('pointerdown', down);
+    canvas.addEventListener('pointermove', move);
+    canvas.addEventListener('pointerup', up);
+    canvas.addEventListener('pointercancel', up);
+    return () => {
+      canvas.removeEventListener('pointerdown', down);
+      canvas.removeEventListener('pointermove', move);
+      canvas.removeEventListener('pointerup', up);
+      canvas.removeEventListener('pointercancel', up);
+      dragging = false;
+      canvas.style.cursor = '';
+    };
+  }, [canvas]);
 
   useFrame(({ clock }, rawDt) => {
     const rb = body.current;
@@ -242,8 +285,15 @@ export function Car() {
       camera.lookAt(lookAt.current);
     } else {
       // Camera: fixed isometric-ish angle that trails the car smoothly.
+      if (orbit !== 0 && !dragging && performance.now() - lastDragAt > ORBIT_RETURN_MS) {
+        // take the short way round, then glide back to the default angle (instantly with reduced motion)
+        orbit = THREE.MathUtils.euclideanModulo(orbit + Math.PI, Math.PI * 2) - Math.PI;
+        orbit = still || Math.abs(orbit) < 0.001 ? 0 : THREE.MathUtils.lerp(orbit, 0, 1 - Math.exp(-1.5 * dt));
+      }
+      carState.orbit = orbit;
       const target = new THREE.Vector3(pos.x, 0, pos.z);
-      const desired = target.clone().add(CAMERA_OFFSET.clone().multiplyScalar(zoom * aspectZoom));
+      tmpOffset.copy(CAMERA_OFFSET).multiplyScalar(zoom * aspectZoom).applyAxisAngle(UP, orbit);
+      const desired = target.clone().add(tmpOffset);
       const k = 1 - Math.exp(-(camera.position.distanceTo(desired) > 25 ? 2 : 4) * dt);
       camera.position.lerp(desired, k);
       lookAt.current.lerp(target, k);

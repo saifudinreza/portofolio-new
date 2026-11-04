@@ -128,6 +128,11 @@ kbd {
 .teleports { display: flex; gap: 4px; background: var(--cream); border: var(--border); border-radius: 12px; padding: 4px; box-shadow: var(--shadow); margin-right: auto; }
 .teleports button { font: inherit; font-weight: 700; font-size: 0.82rem; color: var(--navy); background: none; border: 0; border-radius: 8px; padding: 0.45em 0.75em; cursor: pointer; transition: background var(--dur) var(--ease); }
 .teleports button:hover { background: var(--sand); }
+.teleports .zone-short { display: none; }
+@media (max-width: 520px) {
+  .teleports .zone-long { display: none; }
+  .teleports .zone-short { display: inline; }
+}
 .quality { display: flex; align-items: center; gap: 6px; height: 42px; padding: 0 6px 0 10px; color: var(--navy); background: var(--cream); border: var(--border); border-radius: 12px; box-shadow: var(--shadow); cursor: pointer; }
 .quality select { font: inherit; font-weight: 700; font-size: 0.82rem; color: var(--navy); background: none; border: 0; cursor: pointer; padding: 4px 2px; }
 .quality:focus-within { outline: 3px solid var(--coral); outline-offset: 2px; }

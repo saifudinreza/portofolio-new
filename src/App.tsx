@@ -89,8 +89,8 @@ export default function App() {
       if (e.code === 'KeyR') input.respawnNearestRequested = true;
       if (e.code === 'KeyL' && !e.repeat) useStore.getState().setMuted(!useStore.getState().muted);
       if (e.code === 'KeyM' && !e.repeat && st.started) st.setMap(true);
-      // when a link opens, also keep Enter from pressing whichever button still has focus (like the ☰ Menu button)
-      if (e.code === 'Enter' && st.started && openPrimaryLink()) e.preventDefault();
+      // E and Enter do the same; when a link opens, also keep Enter from pressing whichever button still has focus (like the ☰ Menu button)
+      if ((e.code === 'Enter' || e.code === 'KeyE') && !e.repeat && st.started && openPrimaryLink()) e.preventDefault();
       input.keys.add(e.code);
     };
     const up = (e: KeyboardEvent) => {

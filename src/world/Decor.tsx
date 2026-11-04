@@ -5,7 +5,7 @@ import { BallCollider, CuboidCollider, CylinderCollider, RigidBody, type RapierR
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
-import { RIVER_BANK, RIVER_HALF_WIDTH, WORLD_SIZE, aboutArea, contactPads, distanceToSegment, isClear, palette, pondDistance, projectPadPositions, riverDistance, rng, roadSegments, scaled, trails, warehouse, zones } from './layout';
+import { RIVER_BANK, RIVER_HALF_WIDTH, WORLD_SIZE, aboutArea, contactPads, experienceArea, distanceToSegment, isClear, palette, pondDistance, projectPadPositions, riverDistance, rng, roadSegments, scaled, trails, warehouse, zones } from './layout';
 import { projects } from '../data/profile';
 import { carState } from './carState';
 import { trackLamp } from './dayCycle';
@@ -457,6 +457,7 @@ const markerSpots = [
   ...contactPads.map(([x, z], i) => ({ x, z, y: 2.6, label: ['GitHub', 'LinkedIn', 'Email'][i] })),
   { x: aboutArea.x, z: aboutArea.z, y: 3.2, label: 'About' },
   { x: warehouse.x, z: warehouse.z + 1, y: 4.2, label: 'Skills' },
+  { x: experienceArea.x, z: experienceArea.z, y: 3.2, label: 'Experience' },
 ];
 
 /** A floating ↵ key and label above each spot, fading in as the car comes near and out once it is parked. */

@@ -10,6 +10,7 @@ import { CarFx } from './CarFx';
 import { Letters } from './Letters';
 import { Circuit } from './Circuit';
 import { AboutArea, ContactArea, ProjectsArea, Warehouse } from './Zones';
+import { ExperienceArea } from './ExperienceArea';
 import { Scenery } from './Scenery';
 import { Ground, HomeText, Lights, Paths, Playground } from './Environment';
 import { Cliffs, Clouds, EnvLighting, Sea, Sky } from './Atmosphere';
@@ -113,6 +114,7 @@ export function Experience({ debug = false }: { debug?: boolean }) {
             <ProjectsArea />
             <Warehouse />
             <AboutArea />
+            <ExperienceArea />
             <ContactArea />
           </P>
           <P n="Car">

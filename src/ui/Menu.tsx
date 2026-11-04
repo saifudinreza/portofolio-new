@@ -115,7 +115,7 @@ function ControlsPanel() {
           [['B', 'Ctrl'], 'Brake (steer while braking at speed to drift)'],
           [['H'], 'Horn (hold)'],
           [['R'], "Respawn at the nearest area (I'm stuck)"],
-          [['Enter'], 'Open the project you are parked on'],
+          [['E', 'Enter'], 'Open the link of the spot you are on (a project or a contact pad)'],
           [['M'], 'Big map'],
           [['L'], 'Mute'],
           [['Esc'], 'Close this panel'],

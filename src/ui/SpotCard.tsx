@@ -58,6 +58,14 @@ export function SpotCard() {
           ))}
         </>
       )}
+      {shown.kind === 'experience' && (
+        <>
+          <p className="eyebrow">Career</p>
+          <h2>Experience</h2>
+          <ul className="list">{experience.map((e) => <li key={e.title}><b>{e.title}</b><span>{e.place} · {e.period}</span><span>{e.detail}</span></li>)}</ul>
+          <p className="hint">Education and certifications are in the About area.</p>
+        </>
+      )}
       {shown.kind === 'about' && (
         <>
           <p className="eyebrow">About me</p>
@@ -67,8 +75,7 @@ export function SpotCard() {
           <ul className="list">{education.map((e) => <li key={e.title}><b>{e.title}</b><span>{e.place}{e.detail && ` · ${e.detail}`}</span></li>)}</ul>
           <h3>Certifications</h3>
           <ul className="list">{certifications.map((c) => <li key={c.title}><b>{c.title}</b><span>{c.issuer} · {c.detail}</span></li>)}</ul>
-          <h3>Work</h3>
-          <ul className="list">{experience.map((e) => <li key={e.title}><b>{e.title}</b><span>{e.place} · {e.period}</span></li>)}</ul>
+          <p className="hint">My work history is in the Experience area.</p>
         </>
       )}
       {shown.kind === 'contact' && (
@@ -79,7 +86,7 @@ export function SpotCard() {
           <div className="actions">
             <a className="btn primary big" href={profile.links[shown.id]} target="_blank" rel="noreferrer">{contactCopy[shown.id].cta}</a>
           </div>
-          <p className="hint">Press <kbd>Enter</kbd> to open</p>
+          <p className="hint">Press <kbd>E</kbd> or <kbd>Enter</kbd> to open</p>
         </>
       )}
     </aside>
@@ -98,7 +105,7 @@ function ProjectCard({ id }: { id: string }) {
       {p.links.length > 0 ? (
         <>
           <ProjectLinks project={p} />
-          <p className="hint">Press <kbd>Enter</kbd> to open the first link</p>
+          <p className="hint">Press <kbd>E</kbd> or <kbd>Enter</kbd> to open the first link</p>
         </>
       ) : (
         <p className="hint">Case study available on request.</p>

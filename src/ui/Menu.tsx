@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { input, useStore, type MenuTab } from '../store';
+import { input, useStore, type MenuTab, type TimeMode } from '../store';
 import { profile } from '../data/profile';
 import { ACHIEVEMENTS, SKIN_RULES, resetAchievements, useAchievements, type AchievementId } from '../game/achievements';
 import { CAR_SKINS, type CarSkin } from '../world/layout';
@@ -26,6 +26,8 @@ function Row({ label, children }: { label: string; children: ReactNode }) {
 
 function OptionsPanel() {
   const setMenu = useStore((s) => s.setMenu);
+  const timeMode = useStore((s) => s.timeMode);
+  const setTimeMode = useStore((s) => s.setTimeMode);
   const musicVolume = useStore((s) => s.musicVolume);
   const setMusicVolume = useStore((s) => s.setMusicVolume);
   return (
@@ -45,6 +47,17 @@ function OptionsPanel() {
         </div>
       </Row>
       <Row label="Graphics"><QualitySelect /></Row>
+      <Row label="Time of day">
+        <label className="quality">
+          <span className="sr-only">Time of day</span>
+          <select value={timeMode} onChange={(e) => setTimeMode(e.currentTarget.value as TimeMode)}>
+            <option value="day">Day</option>
+            <option value="dusk">Dusk</option>
+            <option value="night">Night</option>
+            <option value="auto">Automatic (10-minute day)</option>
+          </select>
+        </label>
+      </Row>
       <Row label="Stuck?">
         <button
           className="btn small"

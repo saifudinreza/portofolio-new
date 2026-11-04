@@ -7,6 +7,7 @@ import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeom
 import { WORLD_SIZE, distanceToSegment, isClear, palette, pond, pondDistance, rng, roadSegments, trails } from './layout';
 import { carState } from './carState';
 import { windUniforms } from './wind';
+import { trackLamp } from './dayCycle';
 import { woodMap } from './textures';
 import { setCardShare, shrubParts } from './foliage';
 import { useStore } from '../store';
@@ -192,7 +193,7 @@ function useFurniture() {
       benches,
       meshes: [
         instanced(lampGeo, metal, lampItems),
-        instanced(bulbGeo, new THREE.MeshStandardMaterial({ color: '#FFF1C9', emissive: '#FFC26B', emissiveIntensity: 2.6, roughness: 0.3 }), lampItems, false),
+        instanced(bulbGeo, trackLamp(new THREE.MeshStandardMaterial({ color: '#FFF1C9', emissive: '#FFC26B', emissiveIntensity: 2.6, roughness: 0.3 })), lampItems, false),
         instanced(new THREE.BoxGeometry(0.1, 0.9, 0.1), wood, posts),
         instanced(new THREE.BoxGeometry(0.05, 0.1, 1), wood, rails),
         instanced(benchGeo, wood, benchItems),

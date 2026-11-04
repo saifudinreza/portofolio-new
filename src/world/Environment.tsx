@@ -4,6 +4,7 @@ import { CuboidCollider, RigidBody } from '@react-three/rapier';
 import * as THREE from 'three';
 import { RIVER_HALF_WIDTH, WORLD_SIZE, palette, riverDistance, roadSegments } from './layout';
 import { carState } from './carState';
+import { daySample } from './dayCycle';
 import { Text } from '@react-three/drei';
 import { BODY_FONT, DISPLAY_FONT, GroundText, Signboard } from './common';
 import { useStore } from '../store';
@@ -14,18 +15,29 @@ const HALF = WORLD_SIZE / 2;
 /** Soft sun that follows the car so shadows stay crisp without a huge shadow map. */
 export function Lights() {
   const sun = useRef<THREE.DirectionalLight>(null);
+  const hemi = useRef<THREE.HemisphereLight>(null);
   const target = useMemo(() => new THREE.Object3D(), []);
   const tier = useStore((s) => s.tier);
+  // above low the environment map adds soft fill too, so the hemisphere light steps down
+  const hemiBase = tier === 'low' ? 1.3 : 0.8;
   useFrame(() => {
     if (!sun.current) return;
-    sun.current.position.set(carState.x + 12, 22, carState.z + 8);
+    // colours and strength follow the time of day; the sun sinks towards the horizon at dawn and dusk
+    const d = daySample;
+    sun.current.position.set(carState.x + 12, d.sunHeight, carState.z + 8);
+    sun.current.color.copy(d.sun);
+    sun.current.intensity = d.sunIntensity;
     target.position.set(carState.x, 0, carState.z);
     target.updateMatrixWorld();
+    if (hemi.current) {
+      hemi.current.color.copy(d.hemiSky);
+      hemi.current.groundColor.copy(d.hemiGround);
+      hemi.current.intensity = hemiBase * d.hemiIntensity;
+    }
   });
   return (
     <>
-      {/* above low the environment map adds soft fill too, so the hemisphere light steps down */}
-      <hemisphereLight args={['#FFF4E0', '#C9A77A', tier === 'low' ? 1.3 : 0.8]} />
+      <hemisphereLight ref={hemi} args={['#FFF4E0', '#C9A77A', hemiBase]} />
       <directionalLight
         ref={sun}
         target={target}

@@ -1,5 +1,6 @@
 import { Suspense, lazy, useMemo, useState, type ReactNode } from 'react';
 import { Stats } from './Stats';
+import { DayCycle } from './dayCycle';
 import { Physics } from '@react-three/rapier';
 import { PerformanceMonitor } from '@react-three/drei';
 import { useStore } from '../store';
@@ -61,6 +62,8 @@ export function Experience({ debug = false }: { debug?: boolean }) {
       <color attach="background" args={[palette.sky]} />
       <fog attach="fog" args={[palette.sky, 50, 115]} />
       <AutoQuality />
+      {/* first, so every other part reads this frame's time of day */}
+      <DayCycle />
       {stats && <Stats />}
       {/* image-based reflections cost a lookup on every lit pixel (grass included), so not on low */}
       {tier !== 'low' && <EnvLighting />}

@@ -8,6 +8,7 @@ import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js
 import { RIVER_BANK, RIVER_HALF_WIDTH, WORLD_SIZE, aboutArea, contactPads, distanceToSegment, isClear, palette, pondDistance, projectPadPositions, riverDistance, rng, roadSegments, trails, warehouse, zones } from './layout';
 import { projects } from '../data/profile';
 import { carState } from './carState';
+import { trackLamp } from './dayCycle';
 import { useStore, type Tier } from '../store';
 import { DISPLAY_FONT } from './common';
 import { mossyStoneMaterial, rockGeometry } from './stone';
@@ -266,7 +267,7 @@ function Lanterns() {
   }, []);
   const parts = useMemo(() => {
     const stone = new THREE.MeshStandardMaterial({ color: '#CFC4B0', roughness: 0.95 });
-    const glow = new THREE.MeshStandardMaterial({ color: '#FFE3A6', emissive: '#FFB547', emissiveIntensity: 2.2, roughness: 0.4 });
+    const glow = trackLamp(new THREE.MeshStandardMaterial({ color: '#FFE3A6', emissive: '#FFB547', emissiveIntensity: 2.2, roughness: 0.4 }));
     const body = mergeGeometries([
       new THREE.CylinderGeometry(0.26, 0.32, 0.16, 10).translate(0, 0.08, 0),
       new THREE.CylinderGeometry(0.1, 0.13, 0.55, 10).translate(0, 0.43, 0),

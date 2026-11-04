@@ -3,6 +3,7 @@
 // (then suspend the context), so nothing ever cuts off mid-waveform and pops.
 import { useStore } from '../store';
 import { WORLD_SIZE, riverDistance } from '../world/layout';
+import { dayState } from '../world/dayState';
 
 export type Vec3 = { x: number; y: number; z: number };
 
@@ -441,7 +442,8 @@ function createAmbience(c: AudioContext, dest: AudioNode) {
       // river: audible within 12 m of the water, full strength close to it
       setParam(river.level.gain, RIVER_MAX * clamp01((12 - riverDistance(x, z)) / 9), now, 0.5);
       if (now > nextBird) {
-        chirp(now);
+        // birds keep quiet after dusk
+        if (dayState.night < 0.5) chirp(now);
         nextBird = now + 4 + Math.random() * 6;
       }
     },

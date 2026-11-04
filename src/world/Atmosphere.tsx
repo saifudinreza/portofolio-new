@@ -5,6 +5,7 @@ import { mossyStoneMaterial, rockGeometry } from './stone';
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { RIVER_HALF_WIDTH, WORLD_SIZE, palette, riverDistance, rng } from './layout';
+import { daySample, trackCloud } from './dayCycle';
 
 const HALF = WORLD_SIZE / 2;
 export const SEA_LEVEL = -1.4;
@@ -39,12 +40,13 @@ const skyFragment = /* glsl */ `
 uniform vec3 uHorizon;
 uniform vec3 uZenith;
 uniform vec3 uSunDir;
+uniform float uSunGlow;
 varying vec3 vDir;
 void main() {
   float h = clamp(vDir.y, 0.0, 1.0);
   vec3 col = mix(uHorizon, uZenith, pow(h, 0.55));
   float sun = max(dot(vDir, uSunDir), 0.0);
-  col += vec3(1.0, 0.86, 0.6) * (pow(sun, 12.0) * 0.35 + pow(sun, 400.0) * 1.2);
+  col += vec3(1.0, 0.86, 0.6) * (pow(sun, 12.0) * 0.35 + pow(sun, 400.0) * 1.2) * uSunGlow;
   gl_FragColor = vec4(col, 1.0);
   #include <tonemapping_fragment>
   #include <colorspace_fragment>
@@ -67,11 +69,20 @@ export function Sky() {
           uHorizon: { value: new THREE.Color(palette.sky) },
           uZenith: { value: new THREE.Color('#A9D8DA') },
           uSunDir: { value: new THREE.Vector3(12, 22, 8).normalize() },
+          uSunGlow: { value: 1 },
         },
       }),
     [],
   );
-  useFrame(({ camera }) => ref.current?.position.copy(camera.position));
+  useFrame(({ camera }) => {
+    ref.current?.position.copy(camera.position);
+    // the dome's colours and the sun's glow follow the time of day
+    const u = material.uniforms;
+    u.uHorizon.value.copy(daySample.horizon);
+    u.uZenith.value.copy(daySample.zenith);
+    u.uSunDir.value.set(12, daySample.sunHeight, 8).normalize();
+    u.uSunGlow.value = daySample.sunGlow;
+  });
   return (
     <mesh ref={ref} material={material} renderOrder={1000} frustumCulled={false}>
       <sphereGeometry args={[150, 32, 16]} />
@@ -91,7 +102,7 @@ export function Clouds() {
     const geometry = mergeGeometries(puffs)!;
     geometry.scale(1, 0.55, 1);
     const count = 12;
-    const mesh = new THREE.InstancedMesh(geometry, new THREE.MeshStandardMaterial({ color: '#FFF8EC', roughness: 1, flatShading: true, emissive: '#FFF1DC', emissiveIntensity: 0.25 }), count);
+    const mesh = new THREE.InstancedMesh(geometry, trackCloud(new THREE.MeshStandardMaterial({ color: '#FFF8EC', roughness: 1, flatShading: true, emissive: '#FFF1DC', emissiveIntensity: 0.25 })), count);
     mesh.frustumCulled = false;
     const clouds = Array.from({ length: count }, () => ({ x: (r() * 2 - 1) * 110, z: (r() * 2 - 1) * 110, y: 26 + r() * 14, s: 0.8 + r() * 1.1, yaw: r() * Math.PI }));
     return { mesh, clouds };

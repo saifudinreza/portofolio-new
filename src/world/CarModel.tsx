@@ -5,6 +5,7 @@ import { RoundedBox, Text } from '@react-three/drei';
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { carState } from './carState';
+import { trackHeadlight } from './dayCycle';
 import { DISPLAY_FONT } from './common';
 import { CAR_SKINS, palette } from './layout';
 import { glowMap, treadMap } from './textures';
@@ -233,7 +234,7 @@ export function CarModel({ chassis, wheels, frontPivots }: Refs) {
   // Headlight pool painted on the ground: an additive glow decal instead of real spotlights, which
   // would add a light to every lit pixel in the scene (80k grass blades included).
   const beamMaterial = useMemo(
-    () => new THREE.MeshBasicMaterial({ map: glowMap(), color: '#FFE2A6', transparent: true, opacity: 0.28, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false }),
+    () => trackHeadlight(new THREE.MeshBasicMaterial({ map: glowMap(), color: '#FFE2A6', transparent: true, opacity: 0.28, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false })),
     [],
   );
 

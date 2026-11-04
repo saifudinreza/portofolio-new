@@ -10,6 +10,19 @@ export type Spot =
   | { kind: 'contact'; id: 'github' | 'linkedin' | 'email' };
 
 export type MenuTab = 'options' | 'controls' | 'achievements' | 'about-site';
+/** Time of day: a fixed look, or 'auto' for the 10-minute day/night cycle. Kept here so the main chunk never imports three. */
+export type TimeMode = 'auto' | 'day' | 'dusk' | 'night';
+const TIME_KEY = 'zare-world-time';
+
+function loadTimeMode(): TimeMode {
+  try {
+    const saved = localStorage.getItem(TIME_KEY);
+    if (saved === 'auto' || saved === 'day' || saved === 'dusk' || saved === 'night') return saved;
+  } catch {
+    // fall through to the default
+  }
+  return 'day';
+}
 
 const AUDIO_KEY = 'zare-world-audio';
 
@@ -89,6 +102,8 @@ type State = {
   /** music level on top of the master volume, 0..1 (the menu's Music slider) */
   musicVolume: number;
   setMusicVolume: (v: number) => void;
+  timeMode: TimeMode;
+  setTimeMode: (mode: TimeMode) => void;
   /** jeep paint; the menu only offers the ones that are unlocked */
   carSkin: CarSkin;
   setCarSkin: (skin: CarSkin) => void;
@@ -133,6 +148,15 @@ export const useStore = create<State>((set, get) => ({
   loadDone: false,
   setLoad: (loadProgress, loadDone) => set({ loadProgress, loadDone }),
   ...loadAudioPrefs(),
+  timeMode: loadTimeMode(),
+  setTimeMode: (timeMode) => {
+    set({ timeMode });
+    try {
+      localStorage.setItem(TIME_KEY, timeMode);
+    } catch {
+      // not remembered, that's fine
+    }
+  },
   carSkin: loadSkin(),
   setCarSkin: (carSkin) => {
     set({ carSkin });

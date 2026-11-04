@@ -82,34 +82,56 @@ kbd {
 
 /* ---------- loader ---------- */
 .loader {
-  position: fixed; inset: 0; display: grid; place-items: center; padding: 16px; z-index: 20;
-  background: radial-gradient(circle at 50% 40%, rgba(255, 246, 230, 0.8), rgba(246, 217, 168, 0.95));
-  backdrop-filter: blur(3px);
-  transition: background var(--dur-slow) var(--ease), backdrop-filter var(--dur-slow) var(--ease), opacity var(--dur-slow) var(--ease);
+  position: fixed; inset: 0; display: grid; place-items: center; padding: 16px; z-index: 20; overflow: hidden;
+  background: linear-gradient(180deg, #7fc7d4 0%, #f8d49a 62%, #f2b866 100%);
+  transition: background var(--dur-slow) var(--ease), opacity var(--dur-slow) var(--ease);
 }
-/* once the world has loaded, let the orbiting island show through behind the card */
-.loader.ready { background: radial-gradient(circle at 50% 45%, rgba(255, 246, 230, 0.35), rgba(246, 217, 168, 0.15) 70%); backdrop-filter: none; }
+/* once the world has loaded, the art fades away and the orbiting island shows through behind the card */
+.loader.ready { background: radial-gradient(circle at 50% 45%, rgba(255, 246, 230, 0.35), rgba(246, 217, 168, 0.15) 70%); }
 .loader.leaving { opacity: 0; pointer-events: none; }
 .loader.leaving .loader-box { transform: translateY(16px) scale(0.97); }
+.loader-art { position: absolute; inset: 0; pointer-events: none; transition: opacity 0.9s var(--ease); }
+.loader.ready .loader-art { opacity: 0; }
+.art-sun { position: absolute; width: 150px; height: 150px; right: 14%; top: 12%; border-radius: 50%; background: radial-gradient(circle, #fff3c4 0 38%, #ffd979 62%, rgba(255, 217, 121, 0) 72%); }
+.art-cloud { position: absolute; left: -240px; height: 46px; width: 200px; border-radius: 99px; background: rgba(255, 255, 255, 0.85); animation: drift 70s linear infinite; will-change: transform; }
+.art-cloud::before, .art-cloud::after { content: ''; position: absolute; border-radius: 50%; background: inherit; }
+.art-cloud::before { width: 80px; height: 80px; left: 28px; top: -34px; }
+.art-cloud::after { width: 58px; height: 58px; left: 100px; top: -22px; }
+.art-cloud.c1 { top: 16%; }
+.art-cloud.c2 { top: 30%; scale: 0.7; animation-duration: 95s; animation-delay: -40s; opacity: 0.8; }
+.art-cloud.c3 { top: 8%; scale: 0.5; animation-duration: 120s; animation-delay: -75s; opacity: 0.7; }
+.art-island { position: absolute; left: 0; bottom: 0; width: 100%; height: 34vh; min-height: 140px; animation: sway 24s ease-in-out infinite alternate; will-change: transform; }
 .loader-box {
-  width: min(520px, 100%); text-align: center; background: var(--cream); padding: 2rem 1.6rem;
+  position: relative; width: min(520px, 100%); text-align: center; background: var(--cream); padding: 2rem 1.6rem;
   border: var(--border); border-radius: 18px; box-shadow: 6px 6px 0 var(--navy);
   animation: rise var(--dur-slow) var(--ease) both;
   transition: transform var(--dur-slow) var(--ease);
 }
 .loader h1 { font-size: clamp(2rem, 7vw, 3.2rem); line-height: 1; margin-bottom: 0.3em; }
-.bar { position: relative; height: 12px; border: 2px solid var(--navy); border-radius: 99px; overflow: hidden; margin: 1.2rem 0 0.6rem; background: #fff; }
+.road { position: relative; margin: 2.1rem 0 0.5rem; }
+.jeep { position: absolute; left: 0; bottom: 100%; margin-bottom: -2px; width: 56px; height: 30px; will-change: transform; }
+.jeep svg { display: block; animation: bounce 0.5s ease-in-out infinite alternate; }
+.loader.ready .jeep svg { animation: none; }
+.bar { position: relative; height: 14px; border: 2px solid var(--navy); border-radius: 99px; overflow: hidden; background: #fff; }
 .bar span {
-  display: block; height: 100%; transition: width var(--dur-slow) var(--ease);
+  display: block; width: 100%; height: 100%; transform: scaleX(0); transform-origin: left center; will-change: transform;
   background: repeating-linear-gradient(-45deg, var(--coral) 0 10px, #f58a72 10px 20px);
   background-size: 28px 28px; animation: stripes 0.8s linear infinite;
 }
-/* before the 3D chunk reports any progress, show a moving sliver instead of an empty bar */
-.bar.indeterminate span { width: 35% !important; animation: stripes 0.8s linear infinite, sweep 1.3s var(--ease) infinite; }
+.stage { display: flex; justify-content: center; align-items: baseline; gap: 0.6rem; margin: 0.5rem 0 0.4rem; font-size: 0.9rem; color: var(--navy); }
+.stage-pct { font-family: 'Archivo Black'; font-variant-numeric: tabular-nums; min-width: 3.2ch; text-align: right; }
+.stage-label { font-weight: 700; color: var(--teal-ink); }
+.tip.press { animation: pulse 1.4s ease-in-out infinite; color: var(--navy); }
+@media (prefers-reduced-motion: reduce) {
+  .art-cloud, .art-island, .jeep svg, .bar span, .tip.press { animation: none; }
+}
 .tip { min-height: 1.5em; font-size: 0.86rem; color: var(--muted); animation: fade-up var(--dur-slow) var(--ease) both; }
 .tip b { color: var(--teal-ink); text-transform: uppercase; font-size: 0.7rem; letter-spacing: 0.1em; margin-right: 0.4em; }
 @keyframes stripes { to { background-position: 28px 0; } }
-@keyframes sweep { from { transform: translateX(-100%); } to { transform: translateX(290%); } }
+@keyframes drift { from { translate: 0 0; } to { translate: calc(100vw + 480px) 0; } }
+@keyframes sway { from { transform: translate3d(-14px, 0, 0); } to { transform: translate3d(14px, 0, 0); } }
+@keyframes bounce { from { transform: translateY(0); } to { transform: translateY(-2px); } }
+@keyframes pulse { 50% { opacity: 0.45; } }
 @keyframes rise { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: none; } }
 @keyframes fade-up { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 

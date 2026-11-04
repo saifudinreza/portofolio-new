@@ -3,15 +3,20 @@ import { Canvas } from '@react-three/fiber';
 import { useProgress } from '@react-three/drei';
 import { useStore, type Tier } from '../store';
 import { Experience } from './Experience';
+import { loading } from './loading';
 
 /** Highest device-pixel ratio each quality tier renders at. */
 const MAX_DPR: Record<Tier, number> = { low: 1, medium: 1.25, high: 1.75 };
 
-/** Mirrors three's loading progress into the store, so the loader (in the main chunk) never imports three. */
+/**
+ * Tells the loader (in the main chunk, which never imports three) how far the world is: the scene has arrived (the
+ * bar jumps to where the build starts), and three's loading manager says whether textures or fonts are still coming.
+ * The build steps and the shader compile report themselves (see StagedWorld).
+ */
 function LoadReporter() {
-  const { progress, active } = useProgress();
-  const setLoad = useStore((s) => s.setLoad);
-  useEffect(() => setLoad(progress, !active && progress >= 100), [progress, active, setLoad]);
+  const { active } = useProgress();
+  useEffect(() => loading.stage(0), []);
+  useEffect(() => loading.assets(active), [active]);
   return null;
 }
 

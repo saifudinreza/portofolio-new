@@ -18,16 +18,56 @@ const TOUCH_TIPS = ['Use the joystick to steer and drive', 'Park on a glowing pa
 /** After this long without the 3D world being ready, the loader says it is slow. */
 const SLOW_LOAD_MS = 30_000;
 
+/** While the 3D chunk downloads there is no real progress to show: the bar creeps towards this, and never completes by itself. */
+const DOWNLOAD_CAP = 30;
+const DOWNLOAD_HALF_LIFE_MS = 5000;
+
 export function Loader() {
-  const progress = useStore((s) => s.loadProgress);
   const ready = useStore((s) => s.loadDone);
   const started = useStore((s) => s.started);
+  const label = useStore((s) => s.loadLabel);
   const start = useStore((s) => s.start);
   const setClassic = useStore((s) => s.setClassic);
   const [tip, setTip] = useState(0);
   const [gone, setGone] = useState(false);
   const [slow, setSlow] = useState(false);
   const tips = touchUi() ? TOUCH_TIPS : TIPS;
+  const fill = useRef<HTMLSpanElement>(null);
+  const jeep = useRef<HTMLDivElement>(null);
+  const track = useRef<HTMLDivElement>(null);
+  const percent = useRef<HTMLSpanElement>(null);
+  const bar = useRef<HTMLDivElement>(null);
+
+  // The bar is drawn from here, not from React state: every frame it eases towards the real progress (so it moves
+  // smoothly, never jumps back, and never gets ahead of what has really loaded), by transform only, which keeps
+  // moving even while the main thread is busy building the world.
+  useEffect(() => {
+    let raf = 0;
+    let shown = 0;
+    let last = performance.now();
+    const t0 = last;
+    let lastText = -1;
+    const frame = (now: number) => {
+      const dt = Math.min((now - last) / 1000, 0.1);
+      last = now;
+      const st = useStore.getState();
+      const creep = DOWNLOAD_CAP * (1 - Math.pow(0.5, (now - t0) / DOWNLOAD_HALF_LIFE_MS));
+      const target = st.loadDone ? 100 : st.loadProgress > 0 ? st.loadProgress : creep;
+      shown += Math.max(0, target - shown) * (1 - Math.exp(-(st.loadDone ? 9 : 3.5) * dt));
+      if (target - shown < 0.05) shown = target;
+      if (fill.current) fill.current.style.transform = `scaleX(${shown / 100})`;
+      if (jeep.current && track.current) jeep.current.style.transform = `translate3d(${((track.current.clientWidth - jeep.current.clientWidth) * shown) / 100}px, 0, 0)`;
+      const whole = Math.floor(shown);
+      if (whole !== lastText) {
+        lastText = whole;
+        if (percent.current) percent.current.textContent = `${whole}%`;
+        bar.current?.setAttribute('aria-valuenow', String(whole));
+      }
+      if (shown < 100) raf = requestAnimationFrame(frame);
+    };
+    raf = requestAnimationFrame(frame);
+    return () => cancelAnimationFrame(raf);
+  }, []);
 
   // Also allow starting with any driving key.
   useEffect(() => {
@@ -60,23 +100,54 @@ export function Loader() {
   }, [started]);
 
   if (gone) return null;
+  const stage = ready ? 'Ready' : label || 'Fetching the world';
   return (
     <div className={`loader${started ? ' leaving' : ''}${ready ? ' ready' : ''}`}>
+      {/* the game-style backdrop: sun, drifting clouds and a far island; it fades away when the real world is ready */}
+      <div className="loader-art" aria-hidden="true">
+        <div className="art-sun" />
+        <div className="art-cloud c1" />
+        <div className="art-cloud c2" />
+        <div className="art-cloud c3" />
+        <svg className="art-island" viewBox="0 0 800 220" preserveAspectRatio="xMidYMax slice">
+          <path d="M0 220V150c60-34 120-44 190-18 70-52 150-62 230-14 60-26 130-24 190 6 60-30 130-22 190 12V220z" fill="#e8b865" />
+          <path d="M0 220V176c80-26 150-22 230 0 80-30 170-30 250-2 80-22 220-22 320 4V220z" fill="#d89a4a" />
+          <path d="M0 220V196c120-16 240-10 360 4 120-14 280-16 440-2V220z" fill="#1f8c93" opacity="0.85" />
+        </svg>
+      </div>
       <div className="loader-box">
         <p className="eyebrow">Portfolio · 2026</p>
         <h1>{profile.name}</h1>
         <p className="lead">{profile.role}</p>
         <p className="muted">Take the car for a spin around my little world: projects, skills, and how to reach me.</p>
-        <div className={`bar${progress === 0 && !ready ? ' indeterminate' : ''}`} role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(progress)} aria-label="Loading the 3D world">
-          <span style={{ width: `${ready ? 100 : progress}%` }} />
+        <div className="road" ref={track}>
+          <div className="jeep" ref={jeep} aria-hidden="true">
+            <svg viewBox="0 0 56 30" width="56" height="30">
+              <rect x="4" y="12" width="46" height="11" rx="4" fill="#f26b4f" stroke="#1f3864" strokeWidth="2" />
+              <path d="M14 12l5-8h16l6 8z" fill="#fff6e6" stroke="#1f3864" strokeWidth="2" strokeLinejoin="round" />
+              <circle cx="14" cy="24" r="5" fill="#1f3864" />
+              <circle cx="40" cy="24" r="5" fill="#1f3864" />
+              <circle cx="14" cy="24" r="1.8" fill="#fff6e6" />
+              <circle cx="40" cy="24" r="1.8" fill="#fff6e6" />
+            </svg>
+          </div>
+          <div className="bar" ref={bar} role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={0} aria-label="Loading the 3D world">
+            <span ref={fill} />
+          </div>
         </div>
+        <p className="stage" role="status" aria-live="polite">
+          <span className="stage-pct" ref={percent}>0%</span>
+          <span className="stage-label">{stage}</span>
+        </p>
         {slow && !ready ? (
           <p className="tip" role="status"><b>Still loading…</b> This is taking longer than usual. You can wait, reload, or use the classic view.</p>
+        ) : ready ? (
+          <p className="tip press"><b>Ready</b> Press Enter or tap Start to drive</p>
         ) : (
           <p className="tip" key={tip} aria-live="polite"><b>Tip</b> {tips[tip]}</p>
         )}
         <div className="actions center">
-          <button className="btn primary big" disabled={!ready || started} onClick={start}>{ready ? 'Start driving' : `Loading ${Math.round(progress)}%`}</button>
+          <button className="btn primary big" disabled={!ready || started} onClick={start}>{ready ? 'Start driving' : 'Loading…'}</button>
           <button className="btn" onClick={() => setClassic(true)}>Classic view</button>
         </div>
       </div>

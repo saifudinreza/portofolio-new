@@ -13,6 +13,7 @@ import { AboutArea, ContactArea, ProjectsArea, Warehouse } from './Zones';
 import { ProjectMonuments } from './Monuments';
 import { ExperienceArea } from './ExperienceArea';
 import { Scenery } from './Scenery';
+import { Collectibles } from './Collectibles';
 import { Ground, HomeText, Lights, Paths, Playground } from './Environment';
 import { Cliffs, Clouds, EnvLighting, Sea, Sky } from './Atmosphere';
 import { Details } from './Details';
@@ -103,6 +104,7 @@ export function Experience({ debug = false }: { debug?: boolean }) {
           <P n="Details"><Details /></P>
           <P n="Decor"><Decor /></P>
           <P n="Scenery"><Scenery /></P>
+          <P n="Collectibles"><Collectibles /></P>
           <P n="Pond"><Pond /></P>
           <P n="River + bridge">
             <River />

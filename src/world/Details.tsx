@@ -172,6 +172,12 @@ function layoutFurniture() {
     { x1: 31, z1: 12, x2: 39, z2: 12 },
     { x1: -36, z1: 6, x2: -36, z2: 15 },
     { x1: 36, z1: -4, x2: 36, z2: -10 },
+    // more runs out in the meadows (each is dropped if any point of it is not open ground)
+    { x1: -38, z1: -26, x2: -38, z2: -18 },
+    { x1: 12, z1: -44, x2: 24, z2: -44 },
+    { x1: -8, z1: 38, x2: 2, z2: 38 },
+    { x1: 40, z1: 18, x2: 40, z2: 28 },
+    { x1: -30, z1: -30, x2: -20, z2: -34 },
   ];
   const fences = fenceRuns.filter(({ x1, z1, x2, z2 }) => {
     for (let t = 0; t <= 1; t += 0.1) if (!meadow(x1 + (x2 - x1) * t, z1 + (z2 - z1) * t, 2.8)) return false;
@@ -184,6 +190,20 @@ function layoutFurniture() {
     { x: -16.5, z: 31, yaw: faceTo(-16.5, 31, -22, 26) },
     { x: 20, z: 35.4, yaw: Math.PI },
   ];
+  // Benches beside the roads, facing them, clear of the lamps.
+  roadSegments.forEach(([x1, z1, x2, z2], i) => {
+    const len = Math.hypot(x2 - x1, z2 - z1);
+    if (len < 14) return;
+    const dx = (x2 - x1) / len;
+    const dz = (z2 - z1) / len;
+    [0.3, 0.68].forEach((f, k) => {
+      const side = (k + i) % 2 ? -1 : 1;
+      const x = x1 + dx * len * f - dz * side * 3.1;
+      const z = z1 + dz * len * f + dx * side * 3.1;
+      if (!meadow(x, z, 2.4) || lamps.some((l) => Math.hypot(l.x - x, l.z - z) < 2.5)) return;
+      benches.push({ x, z, yaw: faceTo(x, z, x + dz * side, z - dx * side) });
+    });
+  });
   return { lamps, fences, benches };
 }
 

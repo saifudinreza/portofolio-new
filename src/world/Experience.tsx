@@ -10,6 +10,7 @@ import { CarFx } from './CarFx';
 import { Letters } from './Letters';
 import { Circuit } from './Circuit';
 import { AboutArea, ContactArea, ProjectsArea, Warehouse } from './Zones';
+import { Scenery } from './Scenery';
 import { Ground, HomeText, Lights, Paths, Playground } from './Environment';
 import { Cliffs, Clouds, EnvLighting, Sea, Sky } from './Atmosphere';
 import { Details } from './Details';
@@ -98,6 +99,7 @@ export function Experience({ debug = false }: { debug?: boolean }) {
           <P n="Grass"><Grass /></P>
           <P n="Details"><Details /></P>
           <P n="Decor"><Decor /></P>
+          <P n="Scenery"><Scenery /></P>
           <P n="Pond"><Pond /></P>
           <P n="River + bridge">
             <River />

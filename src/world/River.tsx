@@ -180,7 +180,7 @@ function bedMaterial(time: THREE.IUniform) {
 
 // ---------- waterfalls ----------
 
-const fallVertex = /* glsl */ `
+export const fallVertex = /* glsl */ `
 #include <fog_pars_vertex>
 varying vec2 vUv;
 varying vec3 vWorld;
@@ -194,7 +194,7 @@ void main() {
 }
 `;
 
-const fallFragment = /* glsl */ `
+export const fallFragment = /* glsl */ `
 #include <fog_pars_fragment>
 uniform float uTime;
 varying vec2 vUv;

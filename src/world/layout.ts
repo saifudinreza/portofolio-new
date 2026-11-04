@@ -68,6 +68,27 @@ export const contactPads: [number, number][] = [[18, 30], [26, 30], [34, 30]];
  */
 export const waterfallZone = { x: 62, z: -12, hx: 10, hz: 10 };
 
+/**
+ * The plunge pool under the waterfall (an ellipse), and the cliff it falls from, on the east edge. The cliff face is at
+ * `cliffX` (the rock wall stands between it and the island edge); the pool is dug into the terrain, so its bank is a
+ * real slope like the river's.
+ */
+export const waterfall = { x: 60.5, z: -12, rx: 6, rz: 4.5, cliffX: 66.2, lookout: { x: 49.5, z: -8.5 } };
+/** Height of the pool's water surface (the same as the river's). */
+export const POOL_WATER = -0.3;
+/** 0 at the pool's centre, 1 on the rim of the bed, more outside. */
+export const poolDistance = (x: number, z: number) => Math.hypot((x - waterfall.x) / waterfall.rx, (z - waterfall.z) / waterfall.rz);
+/** Terrain height of the pool: a smooth bowl, 0.9 m deep in the middle, with a gently sloping bank round it. */
+export function poolBedHeight(x: number, z: number) {
+  const d = poolDistance(x, z);
+  if (d >= 1.45) return 0;
+  if (d > 1) {
+    const t = (1.45 - d) / 0.45;
+    return -0.45 * t * t * (3 - 2 * t);
+  }
+  return -0.45 - 0.45 * (1 - d * d);
+}
+
 /** The lighthouse on the south-west coast (built in Scenery.tsx). */
 export const lighthouse = { x: -62, z: 56 };
 
@@ -131,6 +152,7 @@ export const roadSegments: [number, number, number, number][] = [
   [26, -32, 44, -56], // north-east, past the end of the projects spine
   [-24, -10, -52, -6], // west of the skills warehouse
   [-52, -6, -55.5, -6], // the last stretch into the Experience area
+  [26, -6, 47.5, -8.2], // east to the waterfall lookout (the deck starts at x = 46.9)
 ];
 
 /** A point `t` (0..1) of the way along road `i`, plus the road's heading there: [x, z, yaw]. */
@@ -173,7 +195,7 @@ const keepClear: [number, number, number][] = [
   [26, 29, 13], // contact
   [-8, 10, 5], // ramp
   [9, 16, 5], // cones
-  [waterfallZone.x, waterfallZone.z, 13], // reserved for the edge waterfall
+  [waterfallZone.x - 2, waterfallZone.z, 17], // the edge waterfall, its pool, its lookout and the way in
   ...secretPlaces.filter((p) => p.cairn).map((p): [number, number, number] => [p.x, p.z, 5]), // the cairns
 ];
 
@@ -273,7 +295,7 @@ export function riverDistance(x: number, z: number) {
 }
 
 /** Height of the terrain at (x, z): flat ground (0) except the river trench. The ground mesh and its collider are built from this. */
-export const terrainHeight = (x: number, z: number) => riverBedHeight(riverDistance(x, z));
+export const terrainHeight = (x: number, z: number) => Math.min(riverBedHeight(riverDistance(x, z)), poolBedHeight(x, z));
 
 /** Where the Home → Projects road crosses the river: the bridge sits there, lined up with the road. */
 function findBridge() {
@@ -349,12 +371,14 @@ export const trails: [number, number, number, number][] = [
   [-15, 13, -8.7, 20],
 ];
 
-export type Waypoint = { x: number; z: number; idle?: number; look?: [number, number] };
+/** `splash`: while waiting here the walker plays in the water (arms splashing). */
+export type Waypoint = { x: number; z: number; idle?: number; look?: [number, number]; splash?: boolean };
 /**
  * NPC routes, walked there and back. Points sit on road centrelines and are shifted `side` metres to the
  * walker's left so people keep to the verge. `sit` makes the NPC sit down at its (single) point.
  */
-export type NpcRoute = { points: Waypoint[]; side: number; sit?: boolean; hat?: boolean };
+/** `swim`: bare-chested in shorts. `seatY`: when sitting, raised by this much (on a rock). */
+export type NpcRoute = { points: Waypoint[]; side: number; sit?: boolean; hat?: boolean; swim?: boolean; seatY?: number };
 
 export const npcRoutes: NpcRoute[] = [
   // home -> projects, stopping to look at the pads
@@ -371,6 +395,11 @@ export const npcRoutes: NpcRoute[] = [
   { side: 0, points: trails.flatMap(([x1, z1], i) => [{ x: x1, z: z1, idle: i === 0 ? 2 : undefined }]).concat({ x: -8.7, z: 20, idle: 2 }) },
   // someone enjoying the koi pond
   { side: 0, sit: true, points: [{ x: -7.1, z: 30.1, look: [pond.x, pond.z] }] },
+  // two people wading and splashing in the pool under the waterfall
+  { side: 0, swim: true, points: [{ x: 56.5, z: -10.2, idle: 4, splash: true, look: [waterfall.x + 3, waterfall.z] }, { x: 59.5, z: -13, idle: 5, splash: true, look: [waterfall.cliffX, waterfall.z] }, { x: 62.2, z: -10.5, idle: 3, splash: true }] },
+  { side: 0, swim: true, points: [{ x: 62.5, z: -14, idle: 5, splash: true, look: [waterfall.cliffX, waterfall.z] }, { x: 58, z: -12.2, idle: 4, splash: true }, { x: 60, z: -9.3, idle: 3, splash: true }] },
+  // someone sitting on a flat rock at the pool's edge with their feet in the water
+  { side: 0, sit: true, swim: true, seatY: 0.49, points: [{ x: 57.3, z: -7.7, look: [waterfall.x, waterfall.z - 2] }] },
 ];
 
 // ---------- collectible gems ----------

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, type RefObject } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { CapsuleCollider, RigidBody, useRapier, type RapierCollider, type RapierRigidBody } from '@react-three/rapier';
 import * as THREE from 'three';
-import { groundHeight, npcRoutes, palette, pondDistance, riverDistance, RIVER_HALF_WIDTH, type NpcRoute, type Waypoint } from './layout';
+import { groundHeight, npcRoutes, palette, pondDistance, riverDistance, RIVER_HALF_WIDTH, terrainHeight, type NpcRoute, type Waypoint } from './layout';
 import { carState } from './carState';
 import { actors, type Actor } from './actors';
 import { boing } from '../ui/sound';
@@ -32,18 +32,20 @@ const hairStyles: HairStyle[] = ['short', 'long', 'bun', 'curly'];
 const packs = [palette.coral, palette.teal, palette.yellow, '#8E6CC8'];
 
 /** Everyone looks different but the same on every visit: all picks come from the route index. */
-function lookFor(seed: number, hat: boolean): Look {
+function lookFor(seed: number, hat: boolean, swim = false): Look {
+  const skin = skins[seed % skins.length];
   return {
-    skin: skins[seed % skins.length],
-    shirt: shirts[(seed * 3 + 1) % shirts.length],
+    skin,
+    // swimmers are bare-chested in shorts: the shirt is the colour of their skin
+    shirt: swim ? skin : shirts[(seed * 3 + 1) % shirts.length],
     pants: pants[(seed * 5 + 2) % pants.length],
     hair: hairs[(seed * 7 + 3) % hairs.length],
     hairStyle: hairStyles[(seed * 5 + 1) % hairStyles.length],
     hat,
     glasses: seed % 3 === 1,
     backpack: seed % 4 === 2 ? packs[seed % packs.length] : null,
-    longSleeves: seed % 3 === 2,
-    shorts: seed % 4 === 1,
+    longSleeves: !swim && seed % 3 === 2,
+    shorts: swim || seed % 4 === 1,
   };
 }
 
@@ -100,7 +102,7 @@ function Person({ route, seed }: { route: NpcRoute; seed: number }) {
   const { rapier } = useRapier();
 
   const points = useMemo(() => offsetRoute(route), [route]);
-  const parts = useMemo(() => buildPerson(lookFor(seed, !!route.hat)), [seed, route.hat]);
+  const parts = useMemo(() => buildPerson(lookFor(seed, !!route.hat, !!route.swim)), [seed, route.hat, route.swim]);
   const material = peopleMaterial();
 
   const brain = useRef({
@@ -124,6 +126,7 @@ function Person({ route, seed }: { route: NpcRoute; seed: number }) {
     stillFor: 0,
     getup: { from: new THREE.Quaternion(), y: 0, t: 0 },
     blinkAt: 2 + seed * 0.7,
+    splashing: false,
   });
   const actor = useRef<Actor>({ x: points[0].x, z: points[0].z, radius: ACTOR_RADIUS });
   const tmp = useMemo(() => ({ q: new THREE.Quaternion(), q2: new THREE.Quaternion(), v: new THREE.Vector3() }), []);
@@ -135,6 +138,7 @@ function Person({ route, seed }: { route: NpcRoute; seed: number }) {
   }, []);
 
   const startPatrol = (s: typeof brain.current) => {
+    s.splashing = false;
     if (route.sit && points.length === 1 && Math.hypot(s.x - points[0].x, s.z - points[0].z) < 0.1) {
       s.state = 'sit';
       return;
@@ -148,6 +152,7 @@ function Person({ route, seed }: { route: NpcRoute; seed: number }) {
     const awayZ = s.z - carState.z;
     const al = Math.hypot(awayX, awayZ) || 1;
     s.state = 'knocked';
+    s.splashing = false;
     s.knockedAt = now;
     s.solidAt = now + 0.15; // stay a sensor for a moment so it doesn't spawn inside the car
     s.stillFor = 0;
@@ -205,6 +210,7 @@ function Person({ route, seed }: { route: NpcRoute; seed: number }) {
           }
           s.dodge = { fromX: s.x, fromZ: s.z, toX: s.x + px * DODGE_DISTANCE, toZ: s.z + pz * DODGE_DISTANCE, t: 0 };
           s.state = 'avoid';
+          s.splashing = false;
         }
       }
     }
@@ -237,10 +243,12 @@ function Person({ route, seed }: { route: NpcRoute; seed: number }) {
             s.state = 'idle';
             s.timer = point.idle;
             s.look = point.look ?? null;
+            s.splashing = !!point.splash;
           }
           break;
         }
-        const step = Math.min(d, WALK_SPEED * dt);
+        // wading through the water is slower than walking on the bank
+        const step = Math.min(d, WALK_SPEED * (terrainHeight(s.x, s.z) < -0.2 ? 0.6 : 1) * dt);
         s.x += (tx / d) * step;
         s.z += (tz / d) * step;
         targetYaw = Math.atan2(tx, tz);
@@ -351,8 +359,10 @@ function Person({ route, seed }: { route: NpcRoute; seed: number }) {
         s.yaw = turnToward(s.yaw, targetYaw, TURN_RATE * (run ? 2 : 1) * dt);
         yawQuat(s.yaw, tmp.q);
       }
-      // walking over the bridge lifts them onto the deck
-      rb.setNextKinematicTranslation({ x: s.x, y: s.y + groundHeight(s.x, s.z), z: s.z });
+      // walking over the bridge lifts them onto the deck; wading down into the pool lowers them with the terrain
+      const deck = groundHeight(s.x, s.z);
+      const base = deck > 0 ? deck : terrainHeight(s.x, s.z);
+      rb.setNextKinematicTranslation({ x: s.x, y: s.y + base + (s.state === 'sit' ? (route.seatY ?? 0) : 0), z: s.z });
       rb.setNextKinematicRotation(tmp.q);
     }
 
@@ -361,6 +371,7 @@ function Person({ route, seed }: { route: NpcRoute; seed: number }) {
     a.x = s.x;
     a.z = s.z;
     a.radius = s.state === 'knocked' ? (s.stillFor > 0 ? 0.5 : 0) : ACTOR_RADIUS;
+    a.splashing = s.state === 'idle' && s.splashing ? 1 : 0;
 
     // ---- animation ----
     const moved = s.state === 'knocked' || s.state === 'getup' ? 0 : Math.hypot(s.x - prevX, s.z - prevZ);
@@ -389,6 +400,15 @@ function Person({ route, seed }: { route: NpcRoute; seed: number }) {
       elbowX = -0.9;
       drop = SIT_DROP;
       bob = 0;
+    } else if (s.state === 'idle' && s.splashing) {
+      // playing in the water: knees bent, both arms sweeping forward and down to splash
+      const beat = now * 7 + seed;
+      kneeLX = kneeRX = 0.5;
+      armX = -1.0 + Math.sin(beat) * 0.7;
+      armSpread = 0.45;
+      elbowX = -0.7 + Math.sin(beat + 1.2) * 0.5;
+      drop = 0.1;
+      bob = Math.abs(Math.sin(beat * 0.5)) * 0.05;
     } else if (s.state === 'knocked') {
       const flying = s.stillFor === 0;
       legX = flying ? Math.sin(now * 20) * 0.8 : 0;

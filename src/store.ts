@@ -194,7 +194,55 @@ export const input = {
   keys: new Set<string>(),
   /** "I'm stuck": put the car back on the spawn point of the closest area. Set by R, the touch button and the gamepad. */
   respawnNearestRequested: false,
+  /** gamepad Y: open the parked spot's link on the next frame (handled by the car, like the respawn) */
+  openLinkRequested: false,
 };
+
+// ---------- gamepad ----------
+
+const PAD_DEAD = 0.15;
+type PadInput = { throttle: number; steer: number; jump: boolean; brake: boolean; boost: boolean; horn: boolean };
+const NO_PAD: PadInput = { throttle: 0, steer: 0, jump: false, brake: false, boost: false, horn: false };
+// Y and Back act once per press, so remember last frame's state.
+const padPrev = { y: false, back: false };
+
+/**
+ * First connected gamepad with the standard (Xbox-style) layout. Left stick steers, RT/LT are gas and reverse,
+ * A jump, B brake, X boost, RB horn, Y opens the parked spot's link, Back respawns at the nearest area.
+ */
+function readGamepad(): PadInput {
+  if (typeof navigator === 'undefined' || !navigator.getGamepads) return NO_PAD;
+  let pad: Gamepad | null = null;
+  for (const g of navigator.getGamepads()) {
+    if (g && g.connected && g.mapping === 'standard') {
+      pad = g;
+      break;
+    }
+  }
+  if (!pad) {
+    padPrev.y = padPrev.back = false;
+    return NO_PAD;
+  }
+  const pressed = (i: number) => pad.buttons[i]?.pressed ?? false;
+  const value = (i: number) => pad.buttons[i]?.value ?? 0;
+  const ax = pad.axes[0] ?? 0;
+  const stick = Math.abs(ax) < PAD_DEAD ? 0 : (ax - Math.sign(ax) * PAD_DEAD) / (1 - PAD_DEAD);
+  const y = pressed(3);
+  const back = pressed(8);
+  if (y && !padPrev.y) input.openLinkRequested = true;
+  if (back && !padPrev.back) input.respawnNearestRequested = true;
+  padPrev.y = y;
+  padPrev.back = back;
+  return {
+    throttle: value(7) - value(6),
+    // steer is +1 for left, the stick is +1 for right
+    steer: -stick,
+    jump: pressed(0),
+    brake: pressed(1),
+    boost: pressed(2),
+    horn: pressed(5),
+  };
+}
 
 /** Release everything. Called whenever key/pointer up events may never arrive (blur, hidden tab, overlays). */
 export function resetInput() {
@@ -206,9 +254,10 @@ export function resetInput() {
 export function readDriveInput() {
   const k = input.keys;
   const t = input.touch;
-  let throttle = Number(t.gas) - Number(t.reverse) + input.joy.y;
+  const p = readGamepad();
+  let throttle = Number(t.gas) - Number(t.reverse) + input.joy.y + p.throttle;
   // steer is +1 for left, so pushing the stick right steers negative
-  let steer = Number(t.left) - Number(t.right) - input.joy.x;
+  let steer = Number(t.left) - Number(t.right) - input.joy.x + p.steer;
   if (k.has('KeyW') || k.has('ArrowUp')) throttle += 1;
   if (k.has('KeyS') || k.has('ArrowDown')) throttle -= 1;
   if (k.has('KeyA') || k.has('ArrowLeft')) steer += 1;
@@ -216,12 +265,12 @@ export function readDriveInput() {
   return {
     throttle: Math.max(-1, Math.min(1, throttle)),
     steer: Math.max(-1, Math.min(1, steer)),
-    brake: k.has('KeyB') || k.has('ControlLeft'),
+    brake: k.has('KeyB') || k.has('ControlLeft') || p.brake,
     // held, not tapped: the car decides on the press edge so holding Space never bunny-hops
-    jump: k.has('Space') || t.jump,
-    boost: k.has('ShiftLeft') || k.has('ShiftRight') || t.boost,
+    jump: k.has('Space') || t.jump || p.jump,
+    boost: k.has('ShiftLeft') || k.has('ShiftRight') || t.boost || p.boost,
     // held, not tapped: the horn sounds for as long as H (or the touch button) is down
-    horn: k.has('KeyH') || t.horn,
+    horn: k.has('KeyH') || t.horn || p.horn,
   };
 }
 

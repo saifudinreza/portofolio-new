@@ -1,6 +1,5 @@
 import { Suspense, lazy, useEffect, useMemo, useState } from 'react';
 import { input, resetInput, useStore } from './store';
-import { unlock } from './game/achievements';
 import { Toast } from './ui/Toast';
 import { CircuitHud } from './ui/CircuitHud';
 import { Classic } from './ui/Classic';
@@ -9,7 +8,7 @@ import { DriveHud } from './ui/DriveHud';
 import { BigMap } from './ui/BigMap';
 import { Menu } from './ui/Menu';
 import { SpotCard } from './ui/SpotCard';
-import { primaryLink } from './ui/primaryLink';
+import { openPrimaryLink } from './ui/primaryLink';
 
 // The 3D side (three.js, R3F, drei, Rapier WASM) is the heavy part, so the canvas and world load in their
 // own chunk; this main chunk is just React + the HTML UI, which paints the loader and classic view at once.
@@ -88,15 +87,8 @@ export default function App() {
       if (e.code === 'KeyR') input.respawnNearestRequested = true;
       if (e.code === 'KeyL' && !e.repeat) useStore.getState().setMuted(!useStore.getState().muted);
       if (e.code === 'KeyM' && !e.repeat && st.started) st.setMap(true);
-      if (e.code === 'Enter' && st.started) {
-        const href = primaryLink(st.spot);
-        if (href) {
-          // also keep Enter from pressing whichever button still has focus (like the ☰ Menu button)
-          e.preventDefault();
-          if (st.spot?.kind === 'project') unlock('open-live');
-          window.open(href, '_blank', 'noopener');
-        }
-      }
+      // when a link opens, also keep Enter from pressing whichever button still has focus (like the ☰ Menu button)
+      if (e.code === 'Enter' && st.started && openPrimaryLink()) e.preventDefault();
       input.keys.add(e.code);
     };
     const up = (e: KeyboardEvent) => {

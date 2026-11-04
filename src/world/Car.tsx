@@ -6,6 +6,7 @@ import { input, readDriveInput, useStore } from '../store';
 import { inRiver, nearestZone, pondDistance, zones, type ZoneId } from './layout';
 import { AIRTIME_GOAL, SPEED_GOAL, addHonk, addJump, tickPlayTime, unlock, visitZone } from '../game/achievements';
 import { cancelLap } from '../game/circuit';
+import { openPrimaryLink } from '../ui/primaryLink';
 import { impact, updateAmbience, updateCarAudio, updateListener, whoosh, type SurfaceMaterial } from '../ui/sound';
 import { emitImpact } from './impactQueue';
 import { CarModel } from './CarModel';
@@ -225,7 +226,13 @@ export function Car() {
       return;
     }
 
-    const drive = started ? readDriveInput() : { throttle: 0, steer: 0, brake: false, jump: false, boost: false, horn: false };
+    // A gamepad keeps reporting while the menu or the map is open, so the car ignores all input then.
+    const ui = useStore.getState();
+    const drive = started && !ui.menuOpen && !ui.mapOpen ? readDriveInput() : { throttle: 0, steer: 0, brake: false, jump: false, boost: false, horn: false };
+    if (input.openLinkRequested) {
+      input.openLinkRequested = false;
+      openPrimaryLink();
+    }
     if (!started) jumpHeld.current = true;
     let jumped = false;
     if (drive.jump && !jumpHeld.current && grounded) {

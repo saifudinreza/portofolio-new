@@ -91,6 +91,7 @@ export default function App() {
       if (e.code === 'KeyM' && !e.repeat && st.started) st.setMap(true);
       // E and Enter do the same; when a link opens, also keep Enter from pressing whichever button still has focus (like the ☰ Menu button)
       if ((e.code === 'Enter' || e.code === 'KeyE') && !e.repeat && st.started && openPrimaryLink()) e.preventDefault();
+      if (e.code === 'Space' && !e.repeat) input.jumpLatch = true;
       input.keys.add(e.code);
     };
     const up = (e: KeyboardEvent) => {

@@ -259,6 +259,11 @@ export const input = {
   respawnNearestRequested: false,
   /** gamepad Y: open the parked spot's link on the next frame (handled by the car, like the respawn) */
   openLinkRequested: false,
+  /**
+   * A jump press that has not been seen by the car yet. The car reads input once per frame, so on a slow phone a quick
+   * tap that starts and ends between two frames would otherwise vanish. Set on the press, cleared by the next read.
+   */
+  jumpLatch: false,
 };
 
 // ---------- gamepad ----------
@@ -324,6 +329,7 @@ export function resetInput() {
   input.keys.clear();
   for (const b of Object.keys(input.touch) as TouchButton[]) input.touch[b] = false;
   input.joy.x = input.joy.y = 0;
+  input.jumpLatch = false;
 }
 
 export function readDriveInput() {
@@ -337,6 +343,8 @@ export function readDriveInput() {
   if (k.has('KeyS') || k.has('ArrowDown')) throttle -= 1;
   if (k.has('KeyA') || k.has('ArrowLeft')) steer += 1;
   if (k.has('KeyD') || k.has('ArrowRight')) steer -= 1;
+  const latchedJump = input.jumpLatch;
+  input.jumpLatch = false;
   throttle = Math.max(-1, Math.min(1, throttle));
   steer = Math.max(-1, Math.min(1, steer));
   if (Math.abs(throttle) < THROTTLE_DEAD) throttle = 0;
@@ -346,7 +354,7 @@ export function readDriveInput() {
     steer,
     brake: k.has('KeyB') || k.has('ControlLeft') || t.brake || p.brake,
     // held, not tapped: the car decides on the press edge so holding Space never bunny-hops
-    jump: k.has('Space') || t.jump || p.jump,
+    jump: k.has('Space') || t.jump || p.jump || latchedJump,
     boost: k.has('ShiftLeft') || k.has('ShiftRight') || t.boost || p.boost,
     // held, not tapped: the horn sounds for as long as H (or the touch button) is down
     horn: k.has('KeyH') || t.horn || p.horn,
@@ -355,4 +363,5 @@ export function readDriveInput() {
 
 export function setTouchButton(button: TouchButton, pressed: boolean) {
   input.touch[button] = pressed;
+  if (pressed && button === 'jump') input.jumpLatch = true;
 }

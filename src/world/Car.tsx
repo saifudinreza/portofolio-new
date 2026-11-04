@@ -3,7 +3,8 @@ import { useFrame, useThree } from '@react-three/fiber';
 import { CoefficientCombineRule, RigidBody, RoundCuboidCollider, useBeforePhysicsStep, useRapier, type CollisionEnterPayload, type RapierRigidBody } from '@react-three/rapier';
 import * as THREE from 'three';
 import { input, readDriveInput, useStore } from '../store';
-import { inRiver, nearestZone, pondDistance, zones } from './layout';
+import { inRiver, nearestZone, pondDistance, zones, type ZoneId } from './layout';
+import { AIRTIME_GOAL, SPEED_GOAL, addHonk, addJump, tickPlayTime, unlock, visitZone } from '../game/achievements';
 import { impact, updateCarAudio, updateListener, type SurfaceMaterial } from '../ui/sound';
 import { emitImpact } from './impactQueue';
 import { CarModel } from './CarModel';
@@ -22,6 +23,8 @@ const RIDE_HEIGHT = 0.4; // distance from body centre to the bottom of the wheel
 const ROLLING_RESISTANCE = 2; // constant deceleration when coasting, m/s²
 const PARK_SPEED = 0.3; // below this with no throttle the parking brake holds the car
 const JUMP_SPEED = 7.5; // upward speed of a jump; with gravity 25 that is about 1.1 m high
+const ZONE_VISIT_RADIUS = 6; // metres from an area's spawn point that count as having visited it
+const ZONE_IDS = Object.keys(zones) as ZoneId[];
 const CAR_GRASS_RADIUS = 1.8;
 const WATER_SPEED = 0.45; // top speed multiplier while wading through the pond or the river
 const WATER_DRAG = 1.5;
@@ -59,6 +62,8 @@ export function Car() {
   const parked = useRef(false);
   // Jump fires on the press, not while held. Starts true so the Space that closed the loader doesn't jump.
   const jumpHeld = useRef(true);
+  const hornHeld = useRef(false);
+  const airTime = useRef(0);
   const actor = useRef<Actor>({ x: 0, z: 0, radius: 0 });
   const { rapier, world } = useRapier();
   const camera = useThree((s) => s.camera);
@@ -205,6 +210,7 @@ export function Car() {
 
     // Falling off the island or asking for help both land on the closest area's spawn, not always on Home.
     if (pos.y < -10 || input.respawnNearestRequested) {
+      if (pos.y < -10) unlock('abyss');
       input.respawnNearestRequested = false;
       const zn = nearestZone(pos.x, pos.z);
       place(zn.spawn[0], zn.spawn[1], zn.yaw);
@@ -222,9 +228,20 @@ export function Car() {
       }
       rb.setLinvel({ x: vel.x, y: JUMP_SPEED, z: vel.z }, true);
       carState.jumps++;
+      addJump();
       jumped = true;
     }
     jumpHeld.current = drive.jump;
+    if (started) {
+      // achievements: cheap checks, each one a no-op once unlocked
+      tickPlayTime(dt);
+      airTime.current = grounded ? 0 : airTime.current + dt;
+      if (airTime.current > AIRTIME_GOAL) unlock('airtime');
+      if (fwdSpeed > SPEED_GOAL) unlock('speed');
+      if (drive.horn && !hornHeld.current) addHonk();
+      hornHeld.current = drive.horn;
+      for (const id of ZONE_IDS) if (Math.hypot(pos.x - zones[id].spawn[0], pos.z - zones[id].spawn[1]) < ZONE_VISIT_RADIUS) visitZone(id);
+    }
     carState.throttle = drive.throttle;
     carState.brake = drive.brake;
     carState.boost = drive.boost && drive.throttle > 0;
@@ -242,7 +259,9 @@ export function Car() {
     }
 
     if (grounded) {
-      const wet = pondDistance(pos.x, pos.z) < 1 || inRiver(pos.x, pos.z);
+      const inWater = inRiver(pos.x, pos.z);
+      if (inWater) unlock('wet');
+      const wet = pondDistance(pos.x, pos.z) < 1 || inWater;
       const top = (drive.boost ? BOOST_SPEED : MAX_SPEED) * (wet ? WATER_SPEED : 1);
       let push = 0;
       if (drive.throttle > 0 && fwdSpeed < top) push = drive.throttle * ACCEL * (drive.boost ? 1.35 : 1);

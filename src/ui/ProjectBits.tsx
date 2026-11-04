@@ -1,5 +1,6 @@
 import type { CSSProperties } from 'react';
 import type { Project, ProjectLink } from '../data/profile';
+import { unlock } from '../game/achievements';
 
 const isRepo = (l: ProjectLink) => /github\.com/.test(l.href);
 
@@ -30,7 +31,7 @@ export function ProjectLinks({ project }: { project: Project }) {
             {l.label}
           </a>
         ) : (
-          <a key={l.href} className="btn primary big" href={l.href} target="_blank" rel="noreferrer">
+          <a key={l.href} className="btn primary big" href={l.href} target="_blank" rel="noreferrer" onClick={() => unlock('open-live')}>
             {l.label}
             <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden>
               <path d="M7 17 17 7M9 7h8v8" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" fill="none" />

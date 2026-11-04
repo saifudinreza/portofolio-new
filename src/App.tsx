@@ -1,5 +1,7 @@
 import { Suspense, lazy, useEffect, useMemo, useState } from 'react';
 import { input, resetInput, useStore } from './store';
+import { unlock } from './game/achievements';
+import { Toast } from './ui/Toast';
 import { Classic } from './ui/Classic';
 import { InputDebug, KeyHints, Loader, TopBar, TouchControls } from './ui/Hud';
 import { DriveHud } from './ui/DriveHud';
@@ -90,6 +92,7 @@ export default function App() {
         if (href) {
           // also keep Enter from pressing whichever button still has focus (like the ☰ Menu button)
           e.preventDefault();
+          if (st.spot?.kind === 'project') unlock('open-live');
           window.open(href, '_blank', 'noopener');
         }
       }
@@ -134,6 +137,7 @@ export default function App() {
       <TouchControls />
       <Menu />
       <BigMap />
+      <Toast />
       {debug && <InputDebug />}
       <Loader />
       {classicOpen && <Classic />}

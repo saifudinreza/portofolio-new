@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { input, useStore, type MenuTab } from '../store';
 import { profile } from '../data/profile';
+import { ACHIEVEMENTS, resetAchievements, useAchievements, type AchievementId } from '../game/achievements';
 import { QualitySelect, SoundControl } from './Hud';
 import { useDialogFocus } from './useDialog';
 
@@ -109,8 +110,50 @@ function ControlsPanel() {
   );
 }
 
+const formatTime = (total: number) => {
+  const h = Math.floor(total / 3600);
+  const m = Math.floor((total % 3600) / 60);
+  const s = total % 60;
+  return `${h ? `${h}h ` : ''}${h || m ? `${m}min ` : ''}${s}s`;
+};
+
 function AchievementsPanel() {
-  return <p className="muted">Achievements are coming soon.</p>;
+  const a = useAchievements();
+  const progress: Partial<Record<AchievementId, number>> = { 'all-projects': a.projects, 'all-zones': a.zones, jumper: a.jumps, honk: a.honks };
+  const done = ACHIEVEMENTS.filter((x) => a.unlocked[x.id]).length;
+  return (
+    <>
+      <p>
+        <b>{done} of {ACHIEVEMENTS.length}</b> unlocked · time played {formatTime(a.seconds)}
+      </p>
+      <ul className="ach-list">
+        {ACHIEVEMENTS.map((x) => {
+          const got = !!a.unlocked[x.id];
+          const hidden = x.secret && !got;
+          const count = x.goal ? Math.min(progress[x.id] ?? 0, x.goal) : null;
+          return (
+            <li key={x.id} className={got ? 'got' : ''}>
+              <span className="ach-mark" aria-hidden>{got ? '★' : '☆'}</span>
+              <span className="ach-text">
+                <b>{hidden ? '???' : x.title}</b>
+                <small>{hidden ? 'A secret. Keep exploring.' : x.description}</small>
+              </span>
+              {!got && count !== null && !hidden && <span className="ach-count">{count} / {x.goal}</span>}
+              <span className="sr-only">{got ? 'Unlocked' : 'Locked'}</span>
+            </li>
+          );
+        })}
+      </ul>
+      <button
+        className="btn small"
+        onClick={() => {
+          if (window.confirm('Reset all achievements and play time?')) resetAchievements();
+        }}
+      >
+        Reset progress
+      </button>
+    </>
+  );
 }
 
 function AboutSitePanel() {

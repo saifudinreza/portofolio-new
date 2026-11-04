@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import type { ZoneId } from './world/layout';
+import { unlock, visitProject } from './game/achievements';
 
 /** Something the car is currently parked on: a project pad, the warehouse, etc. */
 export type Spot =
@@ -130,10 +131,16 @@ export const useStore = create<State>((set, get) => ({
   speed: 0,
   start: () => set({ started: true }),
   setClassic: (open) => {
-    if (open) resetInput();
+    if (open) {
+      resetInput();
+      unlock('classic');
+    }
     set({ classicOpen: open, menuOpen: open ? null : get().menuOpen, mapOpen: open ? false : get().mapOpen });
   },
-  setSpot: (spot) => set({ spot }),
+  setSpot: (spot) => {
+    if (spot?.kind === 'project') visitProject(spot.id);
+    set({ spot });
+  },
   clearSpotIf: (match) => set((s) => (s.spot && match(s.spot) ? { spot: null } : {})),
   teleportTo: (zone) => set({ teleport: { zone, nonce: Date.now() }, spot: null }),
   setSpeed: (v) => set({ speed: v }),

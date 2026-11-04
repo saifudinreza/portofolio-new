@@ -31,7 +31,7 @@
 |---|---|---|---|
 | 0 — Audit | ISSUE-000 | IN PROGRESS | — |
 | 1 — Stability | ISSUE-014, 020 | IN PROGRESS (PR open) | #32 |
-| 2 — Visual overhaul | ISSUE-001 to 003 (2a-2d) | IN PROGRESS: 2a, 2b done; 2c PR open | #33 (2a), #34 (2b), #35 (2c), #36 (2d) |
+| 2 — Visual overhaul | ISSUE-001 to 003 (2a-2d) | IN PROGRESS: 2a-2c done; 2d PR open | #33 (2a), #34 (2b), #35 (2c), #36 (2d) |
 | 3 — Performance | ISSUE-017, 018, 016 | TODO | #37 |
 | 4 — Driving | ISSUE-004 to 007 | TODO | #38 |
 | 5 — Portfolio | ISSUE-008 to 009 | TODO | #39 |
@@ -152,6 +152,11 @@ _Add reproducible bugs, blockers, and relevant browser/device details here._
 - Created this progress tracker.
 - Next action: perform ISSUE-000 (codebase audit).
 - No implementation status has been assumed or marked complete.
+
+### 2026-11-04 (M2d / #36)
+- `docs/art-direction.md` (baru): palet dengan hex, aturan material, mood cahaya per waktu, checklist aset baru.
+- Palet `layout.ts` lebih hangat dan jenuh (pasir, jalan, teal, coral, kuning, daun, horizon). Keyframe siang di `dayCycle.ts`: matahari emas lebih kuat (2.5), fill hangat lebih rendah, zenith teal lebih jenuh; malam lebih biru dengan lampu 2.6x. Post (High): saturasi 0.08 → 0.2, kontras 0.06 → 0.1, bloom threshold 1.2 → 1.0, split tone 0.16 → 0.2.
+- Dicek lewat screenshot di About: siang, senja, malam, hujan (High) dan siang (Medium). Tidak ada efek baru, hanya parameter; beban tidak berubah. FPS tidak diukur.
 
 ### 2026-11-04 (M2c / #35)
 - `world/Scenery.tsx` (baru, semua instanced): 16 tunggul dengan 60% kayu gelondongan di sebelahnya, 12 tumpukan peti (padat, collider), 260 daun gugur di padang (tidak di Low), dan mercusuar di barat daya (-41, 38) sebagai landmark. Di `Details.tsx`: 5 pagar tambahan dan bangku di tepi jalan (hanya yang lolos pengecekan ruang terbuka).

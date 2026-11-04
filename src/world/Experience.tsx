@@ -1,33 +1,15 @@
-import { Suspense, lazy, useMemo, useState, type ReactNode } from 'react';
+import { Suspense, lazy, useMemo, useState } from 'react';
 import { Stats } from './Stats';
 import { DayCycle, FOG_FAR, FOG_NEAR } from './dayCycle';
 import { Rain } from './Rain';
 import { Physics } from '@react-three/rapier';
 import { PerformanceMonitor } from '@react-three/drei';
 import { useStore } from '../store';
-import { Car } from './Car';
-import { CarFx } from './CarFx';
-import { Letters } from './Letters';
-import { Circuit } from './Circuit';
-import { AboutArea, ContactArea, ProjectsArea, Warehouse } from './Zones';
-import { ProjectMonuments } from './Monuments';
-import { ExperienceArea } from './ExperienceArea';
-import { Scenery } from './Scenery';
-import { Collectibles } from './Collectibles';
-import { Ground, HomeText, Lights, Paths, Playground } from './Environment';
-import { Cliffs, Clouds, EnvLighting, Sea, Sky } from './Atmosphere';
-import { Details } from './Details';
-import { Decor } from './Decor';
-import { Trees } from './Trees';
-import { Grass } from './Grass';
-import { Pond } from './Pond';
-import { River } from './River';
-import { RiverProps } from './RiverProps';
-import { Waterfall } from './Waterfall';
-import { Bridge } from './Bridge';
-import { Npcs } from './Npc';
-import { ImpactParticles } from './Impacts';
-import { letterColors, palette } from './layout';
+import { Lights } from './Environment';
+import { Clouds, EnvLighting, Sea, Sky } from './Atmosphere';
+import { palette } from './layout';
+import { StagedWorld } from './StagedWorld';
+import { P } from './StatsPart';
 
 // Post-processing only runs on high quality, so its library loads in its own chunk and only when needed.
 const PostFx = lazy(() => import('./PostFx').then((m) => ({ default: m.PostFx })));
@@ -56,11 +38,6 @@ function AutoQuality() {
   );
 }
 
-/** Names a part of the world for the `?stats` breakdown. Otherwise just an empty group. */
-function P({ n, children }: { n: string; children: ReactNode }) {
-  return <group userData={{ statsPart: n }}>{children}</group>;
-}
-
 export function Experience({ debug = false }: { debug?: boolean }) {
   const tier = useStore((s) => s.tier);
   const stats = useMemo(() => new URLSearchParams(window.location.search).has('stats'), []);
@@ -87,46 +64,7 @@ export function Experience({ debug = false }: { debug?: boolean }) {
       <Lights />
       <Suspense fallback={null}>
         <Physics gravity={[0, -25, 0]} debug={debug} timeStep={1 / 60}>
-          <P n="Ground, cliffs, roads">
-            <Ground />
-            <Cliffs />
-            <Paths />
-            <HomeText />
-          </P>
-          <P n="Letters">
-            <Letters text="REZA" size={2.6} depth={0.9} position={[0, 0, -3]} colors={letterColors} gap={0.25} />
-          </P>
-          <P n="Playground + circuit">
-            <Playground />
-            <Circuit />
-          </P>
-          <P n="Trees"><Trees /></P>
-          <P n="Grass"><Grass /></P>
-          <P n="Details"><Details /></P>
-          <P n="Decor"><Decor /></P>
-          <P n="Scenery"><Scenery /></P>
-          <P n="Collectibles"><Collectibles /></P>
-          <P n="Pond"><Pond /></P>
-          <P n="River + bridge">
-            <River />
-            <RiverProps />
-            <Bridge />
-          </P>
-          <P n="Waterfall"><Waterfall /></P>
-          <P n="People"><Npcs /></P>
-          <P n="Zones">
-            <ImpactParticles />
-            <ProjectsArea />
-            <Warehouse />
-            <AboutArea />
-            <ExperienceArea />
-            <ContactArea />
-          </P>
-          <P n="Project monuments"><ProjectMonuments /></P>
-          <P n="Car">
-            <Car />
-            <CarFx />
-          </P>
+          <StagedWorld />
         </Physics>
       </Suspense>
       {tier === 'high' && (

@@ -110,7 +110,9 @@ type State = {
   /** 0..100 while the 3D world loads; set from inside the lazily loaded scene. */
   loadProgress: number;
   loadDone: boolean;
-  setLoad: (progress: number, done: boolean) => void;
+  /** What the world is doing right now ("Planting grass and trees"), shown under the loading bar. */
+  loadLabel: string;
+  setLoad: (progress: number, done: boolean, label?: string) => void;
   /** Set when the 3D side fails (render error, failed chunk, lost GL context). Shows the recovery screen. */
   sceneError: 'crash' | 'context-lost' | null;
   setSceneError: (e: 'crash' | 'context-lost' | null) => void;
@@ -165,7 +167,8 @@ export const useStore = create<State>((set, get) => ({
   },
   loadProgress: 0,
   loadDone: false,
-  setLoad: (loadProgress, loadDone) => set({ loadProgress, loadDone }),
+  loadLabel: '',
+  setLoad: (loadProgress, loadDone, label) => set((st) => ({ loadProgress, loadDone, loadLabel: label ?? st.loadLabel })),
   sceneError: null,
   setSceneError: (sceneError) => set({ sceneError }),
   ...loadAudioPrefs(),

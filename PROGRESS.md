@@ -153,8 +153,8 @@ _Add reproducible bugs, blockers, and relevant browser/device details here._
 - Next action: perform ISSUE-000 (codebase audit).
 - No implementation status has been assumed or marked complete.
 
-### 2026-11-04 (folder features/)
-- Folder `features/` (baru): 10 file fitur, satu fitur satu issue, ditulis agar bisa dikerjakan model AI yang lebih murah. Berisi README (urutan dan aturan bersama) dan: 01 loading screen ala game, 02 rumput lebih padat dan realistis, 03 kolam dengan patung air mancur, 04 jembatan lebih realistis, 05 sungai realistis dengan lereng dan batu, 06 monumen di area Projects, 07 bangunan monumen About, 08 perluasan pulau (96 → 128), 09 air terjun beserta kolam dan batu, 10 NPC bermain air. Urutan dan ketergantungan ada di `features/README.md`. Belum dibuat sebagai GitHub issue.
+### 2026-11-04 (folder issues/)
+- Folder `issues/` berisi 9 file fitur (satu fitur satu issue, GitHub #49–#57) untuk model AI yang lebih murah: perluasan pulau, rumput, sungai, jembatan, air mancur, monumen proyek, gedung About, air terjun + NPC mandi, loading screen. Urutan dan aturan bersama ada di `issues/README.md`. Folder `features/` yang kembar dihapus, `prompt.txt` dihapus.
 
 ### 2026-11-04 (M3 / #37, bagian tanpa GPU)
 - **Audit listener:** 18 `addEventListener` vs 13 `removeEventListener`; 5 sisanya disengaja (listener singleton di `sound.ts` dan elemen audio hidup selama halaman; listener canvas di `Scene.tsx` ikut hilang dengan elemennya). Tidak ada kebocoran listener.

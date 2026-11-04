@@ -3,6 +3,7 @@ import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
 import { WORLD_SIZE, distanceToSegment, isClear, rng, roadSegments } from './layout';
 import { actors } from './actors';
+import { windUniforms } from './wind';
 import { useStore, type Tier } from '../store';
 
 const HALF = WORLD_SIZE / 2;
@@ -102,6 +103,8 @@ function scatter(target: number) {
 const vertexHead = /* glsl */ `
 uniform float uTime;
 uniform float uHeight;
+uniform vec2 uWindDir;
+uniform float uWindStrength;
 uniform vec4 uStamps[${MAX_STAMPS}];
 attribute vec4 aBlade; // root x, root z, yaw, height
 attribute float aTint;
@@ -115,10 +118,10 @@ vec2 root = aBlade.xy;
 float height = aBlade.w * uHeight;
 vec2 across = vec2(cos(aBlade.z), sin(aBlade.z));
 
-vec2 windDir = vec2(0.89, 0.45);
+vec2 windDir = uWindDir;
 float gust = sin(uTime * 0.9 - dot(root, windDir) * 0.22) * 0.5 + 0.5;
 float flutter = sin(uTime * 3.1 + aBlade.z * 9.0 + root.x * 1.3) + 0.5 * sin(uTime * 4.7 + root.y * 2.1);
-vec2 bend = windDir * (0.1 + 0.32 * gust * gust) + vec2(-windDir.y, windDir.x) * flutter * 0.05;
+vec2 bend = (windDir * (0.1 + 0.32 * gust * gust) + vec2(-windDir.y, windDir.x) * flutter * 0.05) * uWindStrength;
 
 vec2 push = vec2(0.0);
 for (int i = 0; i < ${MAX_STAMPS}; i++) {
@@ -176,6 +179,7 @@ export function Grass() {
     const uniforms = {
       uTime: { value: 0 },
       uHeight: { value: 1 },
+      ...windUniforms,
       uStamps: { value: Array.from({ length: MAX_STAMPS }, () => new THREE.Vector4()) },
     };
     const material = new THREE.MeshStandardMaterial({ roughness: 0.9, side: THREE.DoubleSide });

@@ -16,5 +16,9 @@ export const carState = {
   parked: false,
   mass: 0,
   fps: 0,
+  /** how many times the player has jumped, for achievements */
+  jumps: 0,
+  /** camera swing around the car in radians (0 = default angle), set by dragging the mouse */
+  orbit: 0,
 };
 if (typeof window !== 'undefined') (window as unknown as { __car: typeof carState }).__car = carState;

@@ -6,7 +6,7 @@ import { palette } from './layout';
 export const DISPLAY_FONT = '/fonts/ArchivoBlack-Regular.ttf';
 export const BODY_FONT = '/fonts/DMSans.ttf';
 
-const isCar = (p: IntersectionEnterPayload) => !!(p.other.rigidBody?.userData as { isCar?: boolean } | undefined)?.isCar;
+export const isCar = (p: IntersectionEnterPayload) => !!(p.other.rigidBody?.userData as { isCar?: boolean } | undefined)?.isCar;
 
 /** Invisible trigger volume that fires when the car drives in or out. */
 export function Sensor({ position, size, onEnter, onExit }: {

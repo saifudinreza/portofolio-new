@@ -21,9 +21,11 @@ An interactive portfolio where you drive a little jeep around an island to explo
 - **Contact**: GitHub, LinkedIn and email pads.
 - **River and bridge**: a river winds from the north shore past Home and out to the east, spilling off the cliffs as a waterfall at both ends. A wooden bridge carries the Projects road over it; anywhere else you can wade across (slowly, with a splash).
 - A jump ramp and a cone slalom, just for fun.
+- **Time of day**: Day (the default look), Dusk, Night or an automatic 10-minute cycle, picked in the menu. Sun, sky, fog, ambient light, lamps and the jeep's headlights follow it, and the birds go quiet after dark. **Weather** (Clear, Rain or an occasional automatic shower) greys the light, pulls the fog in, adds wind-blown streaks (Medium and High only, fewer with reduced motion) and a soft rain hiss. No lightning.
+- **Ambience**: soft surf near the shore, a trickle near the river, a light wind and the odd bird, all synthesised and mixed far below the engine. Achievements, jeep paint jobs to unlock and a big map sit in the menu.
 - **Classic view**: the whole portfolio as a normal scrollable page, for recruiters in a hurry and for devices without WebGL.
 
-Controls: `W A S D` or arrow keys to drive, `Shift` boost, `Space` brake, hold `H` for the horn, `M` mute, `R` reset, scroll to zoom. On phones and tablets a thumb joystick (or arrow buttons, switchable) drives the car, with boost and horn buttons, and the phone buzzes on crashes. The top bar jumps straight to any area and holds the graphics and sound settings. A speedometer with a boost light and a mini-map (areas, pond, people, the car) sit in the corner while you drive.
+Controls: `W A S D` or arrow keys to drive, `Shift` boost, `Space` jump, `B` or left `Ctrl` brake, hold `H` for the horn, `L` mute, `R` respawn at the nearest area ("I'm stuck"), drag to turn the camera, scroll to zoom. A gamepad works too (standard layout): left stick steers, RT/LT gas and reverse, A jump, B brake, X boost, RB horn, Y opens the project you are parked on, Back respawns. On phones and tablets a thumb joystick (or arrow buttons, switchable) drives the car, with jump, boost and horn buttons, and the phone buzzes on crashes. The top bar jumps straight to any area and has a mute button; the ☰ Menu holds the graphics and volume settings, "I'm stuck", the full controls list (keyboard, touch, gamepad) and the credits, and `M` opens a big live map where a click drives you to that area. A speedometer with a boost light and a mini-map (areas, pond, people, the car) sit in the corner while you drive.
 
 ## Graphics and performance
 
@@ -72,7 +74,15 @@ npm run build     # type-check + production build into dist/
 npm run preview   # serve the production build
 ```
 
-Add `?debug` to the URL to see physics colliders and the raw input, and `?touch` to try the phone controls on a laptop.
+Add `?debug` to the URL to see physics colliders and the raw input, `?touch` to try the phone controls on a laptop, and `?stats` for FPS, draw calls and triangles per frame (every pass, shadows and post-processing included) with meshes and triangles per world part; the same numbers are on `window.__stats`.
+
+Draw calls and triangles at Home, measured with `?stats` (they don't depend on the GPU; FPS does, so measure that on your own machine):
+
+| Tier | Draw calls | Triangles | Heaviest parts |
+| --- | --- | --- | --- |
+| Low | 209 | 523k | grass 224k tris in 1 mesh; zones 180 meshes |
+| Medium | 378 | 920k | grass 420k; the shadow pass nearly doubles the calls |
+| High | 398 | 1.07M | grass 560k; zones 180 meshes, people 77, details 35 |
 
 For production, set `VITE_SITE_URL` (for example `https://your-site.vercel.app`) in the Vercel project settings so the Open Graph and Twitter preview image URLs in `index.html` are absolute.
 
@@ -120,7 +130,7 @@ src/
     decorTextures.ts     paving, light pool, fallen leaf and marker textures
     common.tsx           sensors, ground text, signboards
     layout.ts            positions, roads, river and bridge, NPC routes and colour palette
-  ui/                    loader, top bar, driving HUD and mini-map, cards, touch controls, classic view
+  ui/                    loader, top bar, menu, big map, driving HUD and mini-map, cards, touch controls, classic view
 public/fonts/            Archivo Black + DM Sans (OFL), plus a typeface JSON for the 3D letters
 public/og.jpg            social preview image
 ```
@@ -128,3 +138,5 @@ public/og.jpg            social preview image
 ## Credits
 
 Fonts: Archivo Black and DM Sans, SIL Open Font License. Concept inspired by [bruno-simon.com](https://bruno-simon.com). All models (the jeep, people, trees, props) are built in code for this project and every texture is drawn on a canvas at startup, so there are no third-party model or texture files. All sounds (engine, horn, collisions, splashes) are synthesised at runtime with the Web Audio API, so there are no third-party audio files to license.
+
+Music: none bundled yet. Drop tracks into `public/audio/` as `music-1.mp3` and `music-2.mp3` (they play in turn after "Start driving", with their own slider in the menu; missing files are skipped silently) and credit them here: _track, artist, licence_.

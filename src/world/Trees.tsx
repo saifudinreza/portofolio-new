@@ -5,6 +5,7 @@ import * as THREE from 'three';
 import { WORLD_SIZE, distanceToSegment, isClear, pondDistance, rng, trails } from './layout';
 import { actors, type Actor } from './actors';
 import { carState } from './carState';
+import { windUniforms } from './wind';
 import { barkMap, leafClusterMap, needleMap, singleLeafMap } from './foliageTextures';
 import { canopyGeometry, coreGeometry, kinds, setCardShare, trunkGeometry } from './foliage';
 import { useStore, type Tier } from '../store';
@@ -28,6 +29,7 @@ type Leaf = { x: number; y: number; z: number; vx: number; vy: number; vz: numbe
 const vertexHead = /* glsl */ `
 uniform float uTime;
 uniform vec2 uWindDir;
+uniform float uWindStrength;
 attribute vec4 aTree; // spring lean x, z, wind phase, unused
 `;
 
@@ -45,7 +47,7 @@ transformed += vec3(
 #ifdef USE_INSTANCING
 vec2 treePos = instanceMatrix[3].xz;
 float gust = sin(uTime * 0.7 - dot(treePos, uWindDir) * 0.15) * 0.5 + 0.5;
-vec2 lean = uWindDir * (0.03 + 0.06 * gust * gust)
+vec2 lean = uWindDir * (0.03 + 0.06 * gust * gust) * uWindStrength
   + vec2(sin(uTime * 1.3 + aTree.z), sin(uTime * 1.7 + aTree.z * 1.9)) * 0.02
   + aTree.xy;
 float k = max(position.y - 0.2, 0.0) / ${TREE_HEIGHT.toFixed(1)};
@@ -99,7 +101,7 @@ export function Trees() {
   const { trees, meshes, attrs, uniforms, leaves, leafMesh } = useMemo(() => {
     const trees = layout();
     const r = rng(11);
-    const uniforms = { uTime: { value: 0 }, uWindDir: { value: new THREE.Vector2(0.89, 0.45) } };
+    const uniforms = { uTime: { value: 0 }, ...windUniforms };
     const leafTex = leafClusterMap();
     const needleTex = needleMap();
     const bark = barkMap();

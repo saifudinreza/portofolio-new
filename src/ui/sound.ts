@@ -1,14 +1,68 @@
-// All game audio is synthesised with WebAudio, no audio files needed.
+// All game audio is synthesised with WebAudio; the only files are the optional music tracks in public/audio/.
 // One context, one master gain: mute/volume, hidden tabs and the classic view all just move that gain
 // (then suspend the context), so nothing ever cuts off mid-waveform and pops.
 import { useStore } from '../store';
+import { WORLD_SIZE, riverDistance } from '../world/layout';
+import { dayState } from '../world/dayState';
 
 export type Vec3 = { x: number; y: number; z: number };
 
 let ctx: AudioContext | null = null;
 let master: GainNode | null = null;
 let engine: ReturnType<typeof createEngine> | null = null;
+let ambience: ReturnType<typeof createAmbience> | null = null;
+let music: ReturnType<typeof createMusic> | null = null;
 let suspendTimer = 0;
+
+// ---------- music ----------
+
+// Background tracks are optional files the owner drops into public/audio/. A missing or broken file is skipped
+// once and then left alone: no retry loop, no errors thrown, the rest of the audio carries on.
+const TRACKS = ['/audio/music-1.mp3', '/audio/music-2.mp3'];
+const MUSIC_LEVEL = 0.25; // relative to the master volume, before the Music slider
+const MUSIC_FADE_IN = 2;
+
+function createMusic(c: AudioContext, dest: AudioNode) {
+  const el = new Audio();
+  el.preload = 'auto';
+  const gain = c.createGain();
+  gain.gain.value = 0;
+  c.createMediaElementSource(el).connect(gain).connect(dest);
+  const broken = new Set<number>();
+  const state = { el, gain, dead: false, track: 0 };
+
+  const play = (i: number) => {
+    // next track that hasn't failed yet
+    let pick = -1;
+    for (let k = 0; k < TRACKS.length; k++) {
+      const j = (i + k) % TRACKS.length;
+      if (!broken.has(j)) {
+        pick = j;
+        break;
+      }
+    }
+    if (pick < 0) {
+      state.dead = true;
+      el.removeAttribute('src');
+      return;
+    }
+    state.track = pick;
+    el.src = TRACKS[pick];
+    const now = c.currentTime;
+    gain.gain.cancelScheduledValues(now);
+    gain.gain.setValueAtTime(0, now);
+    gain.gain.linearRampToValueAtTime(MUSIC_LEVEL * useStore.getState().musicVolume, now + MUSIC_FADE_IN);
+    void el.play().catch(() => {});
+  };
+  el.addEventListener('ended', () => play(state.track + 1));
+  el.addEventListener('error', () => {
+    if (state.dead) return;
+    broken.add(state.track);
+    play(state.track + 1);
+  });
+  play(0);
+  return state;
+}
 
 const audible = () => {
   const s = useStore.getState();
@@ -22,6 +76,11 @@ function sync() {
   const target = level();
   master.gain.setTargetAtTime(target, ctx.currentTime, 0.04);
   clearTimeout(suspendTimer);
+  // the music file keeps playing on its own clock, so pause it with the rest instead of letting it run on silently
+  if (music && !music.dead) {
+    if (target > 0) void music.el.play().catch(() => {});
+    else music.el.pause();
+  }
   if (target > 0) {
     if (ctx.state === 'suspended') void ctx.resume();
   } else {
@@ -42,6 +101,17 @@ function unlock() {
     limiter.ratio.value = 8;
     master.connect(limiter).connect(ctx.destination);
     engine = createEngine(ctx, master);
+    try {
+      ambience = createAmbience(ctx, master);
+    } catch (err) {
+      // the background layer is optional: never let it take the engine and the rest of the audio down with it
+      console.error('Ambience audio failed to start', err);
+    }
+    try {
+      music = createMusic(ctx, master);
+    } catch {
+      // no music, the rest still plays
+    }
     void ctx.resume();
   } catch {
     // Audio is a nice-to-have; ignore browsers that block it.
@@ -55,6 +125,7 @@ if (typeof document !== 'undefined') {
     // Runs synchronously inside the click/keydown that called start(), which counts as the user gesture.
     if (s.started && !prev.started) unlock();
     if (s.started !== prev.started || s.classicOpen !== prev.classicOpen || s.muted !== prev.muted || s.volume !== prev.volume) sync();
+    if (s.musicVolume !== prev.musicVolume && music && ctx) music.gain.gain.setTargetAtTime(MUSIC_LEVEL * s.musicVolume, ctx.currentTime, 0.1);
   });
   document.addEventListener('visibilitychange', sync);
 }
@@ -286,6 +357,132 @@ function createEngine(c: AudioContext, dest: AudioNode) {
 export function updateCarAudio(s: Parameters<ReturnType<typeof createEngine>['update']>[0]) {
   if (!ctx || ctx.state !== 'running' || !engine) return;
   engine.update(s);
+}
+
+// ---------- ambience ----------
+
+// Three layers of looping noise (surf, river, wind) whose loudness follows where the car is, plus the odd bird.
+// Everything is meant to sit far behind the engine: the three layers together never pass AMBIENCE_MAX.
+const AMBIENCE_MAX = 0.12;
+const SURF_MAX = 0.06;
+const RIVER_MAX = 0.04;
+const WIND_LEVEL = 0.015;
+const BIRD_LEVEL = 0.03;
+/** rain is an extra layer on top of the three above, only while it rains */
+const RAIN_MAX = 0.08;
+
+const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
+
+function createAmbience(c: AudioContext, dest: AudioNode) {
+  // the three layers at full level add up to 0.115, just under AMBIENCE_MAX
+  const bus = c.createGain();
+  bus.gain.value = Math.min(1, AMBIENCE_MAX / (SURF_MAX + RIVER_MAX + WIND_LEVEL));
+  bus.connect(dest);
+
+  const noise = (type: BiquadFilterType, freq: number, q: number) => {
+    const src = c.createBufferSource();
+    src.buffer = noiseBuffer(c, 4, () => 1);
+    src.loop = true;
+    const filter = c.createBiquadFilter();
+    filter.type = type;
+    filter.frequency.value = freq;
+    filter.Q.value = q;
+    const level = c.createGain();
+    level.gain.value = 0;
+    src.connect(filter).connect(level).connect(bus);
+    src.start();
+    return { filter, level };
+  };
+  const lfo = (hz: number, depth: number, target: AudioParam) => {
+    const o = c.createOscillator();
+    const g = c.createGain();
+    o.frequency.value = hz;
+    g.gain.value = depth;
+    o.connect(g).connect(target);
+    o.start();
+  };
+
+  const surf = noise('lowpass', 500, 0.7);
+  // the swell: the surf's own loudness breathes slowly (about every 7 s) around its level
+  const swell = c.createGain();
+  swell.gain.value = 0.7;
+  surf.filter.disconnect();
+  surf.filter.connect(swell).connect(surf.level);
+  lfo(1 / 7, 0.3, swell.gain);
+
+  const river = noise('bandpass', 1200, 0.7);
+  const rain = noise('highpass', 1500, 0.7);
+  const wind = noise('bandpass', 400, 0.8);
+  lfo(0.06, 140, wind.filter.frequency); // the wind's pitch wanders slowly
+  wind.level.gain.value = WIND_LEVEL;
+
+  let nextBird = c.currentTime + 4;
+  const chirp = (now: number) => {
+    const notes = 2 + Math.floor(Math.random() * 3);
+    const base = 2200 + Math.random() * 1600;
+    for (let i = 0; i < notes; i++) {
+      const t = now + i * 0.11;
+      const o = c.createOscillator();
+      const g = c.createGain();
+      o.type = 'sine';
+      o.frequency.setValueAtTime(base * (1 + (i % 2) * 0.12), t);
+      o.frequency.exponentialRampToValueAtTime(base * (1.15 + (i % 2) * 0.12), t + 0.08);
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(BIRD_LEVEL, t + 0.015);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.08);
+      o.connect(g).connect(dest);
+      o.start(t);
+      o.stop(t + 0.1);
+    }
+  };
+
+  return {
+    update(x: number, z: number) {
+      const now = c.currentTime;
+      // surf near the island's edge: full inside 8 m of it, gone beyond 25 m
+      const edge = WORLD_SIZE / 2 - Math.max(Math.abs(x), Math.abs(z));
+      setParam(surf.level.gain, SURF_MAX * clamp01((25 - edge) / 17), now, 0.5);
+      // river: audible within 12 m of the water, full strength close to it
+      setParam(river.level.gain, RIVER_MAX * clamp01((12 - riverDistance(x, z)) / 9), now, 0.5);
+      // rain hiss follows the shower (it fades over seconds already, so a short smoothing is enough)
+      setParam(rain.level.gain, RAIN_MAX * dayState.rain, now, 0.3);
+      if (now > nextBird) {
+        // birds keep quiet after dusk and in the rain
+        if (dayState.night < 0.5 && dayState.rain < 0.3) chirp(now);
+        nextBird = now + 4 + Math.random() * 6;
+      }
+    },
+  };
+}
+
+/** A short airy sweep for the intro camera. The context may still be resuming right after "Start driving", so it waits for it. */
+export function whoosh() {
+  if (!ctx || !master) return;
+  const c = ctx;
+  const out = master;
+  const play = () => {
+    const now = c.currentTime;
+    const src = c.createBufferSource();
+    src.buffer = noiseBuffer(c, 0.8, (t) => Math.sin(Math.PI * t)); // swells in and fades out
+    const filter = c.createBiquadFilter();
+    filter.type = 'bandpass';
+    filter.Q.value = 0.9;
+    filter.frequency.setValueAtTime(300, now);
+    filter.frequency.exponentialRampToValueAtTime(1500, now + 0.8);
+    const gain = c.createGain();
+    gain.gain.value = 0.1;
+    src.connect(filter).connect(gain).connect(out);
+    src.start(now);
+    src.stop(now + 0.85);
+  };
+  if (c.state === 'running') play();
+  else void c.resume().then(play).catch(() => {});
+}
+
+/** Called by the car every frame with its position. Does nothing until audio has been unlocked. */
+export function updateAmbience(x: number, z: number) {
+  if (!ctx || ctx.state !== 'running' || !ambience) return;
+  ambience.update(x, z);
 }
 
 // ---------- collisions ----------

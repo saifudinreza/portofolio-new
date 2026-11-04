@@ -13,6 +13,20 @@ export const zones: Record<ZoneId, { label: string; spawn: [number, number]; yaw
   contact: { label: 'Contact', spawn: [10, 30], yaw: Math.PI / 2 },
 };
 
+/** The zone whose spawn point is closest to (x, z): where "I'm stuck" and falling off the island put the car back. */
+export function nearestZone(x: number, z: number) {
+  let best = zones.home;
+  let bestD = Infinity;
+  for (const zn of Object.values(zones)) {
+    const d = Math.hypot(x - zn.spawn[0], z - zn.spawn[1]);
+    if (d < bestD) {
+      bestD = d;
+      best = zn;
+    }
+  }
+  return best;
+}
+
 // Project pads sit on a 3 x 2 grid in the north-east.
 export const projectPadPositions: [number, number][] = [
   [16, -16], [26, -16], [36, -16],
@@ -48,6 +62,15 @@ export const palette = {
   sky: '#F6D9A8',
 };
 
+/** Jeep paint colours. The default `navy` is lighter than the UI navy so the body reads from the top-down camera. */
+export const CAR_SKINS = {
+  navy: { paint: '#2F5A9E' },
+  coral: { paint: '#E8664A' },
+  sand: { paint: '#D9B26F' },
+  teal: { paint: '#2BA89A' },
+} as const;
+export type CarSkin = keyof typeof CAR_SKINS;
+
 export const letterColors = [palette.navy, palette.teal, palette.coral, palette.yellow];
 
 /** Dirt roads from the centre to each area: [x1, z1, x2, z2]. Trees are kept off these. */
@@ -59,6 +82,26 @@ export const roadSegments: [number, number, number, number][] = [
   [0, 4, 10, 30], // to contact
   [10, 30, 36, 30], // along the contact pads
   [26, -6, 26, -32], // projects spine
+];
+
+/** A point `t` (0..1) of the way along road `i`, plus the road's heading there: [x, z, yaw]. */
+const onRoad = (i: number, t: number): [number, number, number] => {
+  const [x1, z1, x2, z2] = roadSegments[i];
+  return [x1 + (x2 - x1) * t, z1 + (z2 - z1) * t, Math.atan2(x2 - x1, z2 - z1)];
+};
+
+/**
+ * Time-trial gates, in driving order; gate 0 is both start and finish. One lap: out along the Skills road and back,
+ * down the About road, across north of the pond to the Contact road, and home. Every point was checked to keep
+ * clear of the river, the pond, the pads and the Home spawn.
+ */
+export const circuitGates: [number, number, number][] = [
+  onRoad(1, 0.42), // start / finish, on the Skills road just past the plaza
+  onRoad(1, 0.78), // before the warehouse (and clear of the Skills spawn): turn round after it
+  onRoad(3, 0.45), // About road
+  onRoad(3, 0.8), // near About
+  onRoad(4, 0.75), // over to the Contact road
+  onRoad(4, 0.3), // back towards Home
 ];
 
 export function distanceToSegment(x: number, z: number, [x1, z1, x2, z2]: [number, number, number, number]) {

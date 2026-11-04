@@ -1,11 +1,13 @@
-import { useLayoutEffect, useMemo, useRef, type MutableRefObject } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, type MutableRefObject } from 'react';
+import { useStore } from '../store';
 import { useFrame } from '@react-three/fiber';
 import { RoundedBox, Text } from '@react-three/drei';
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { carState } from './carState';
+import { trackHeadlight } from './dayCycle';
 import { DISPLAY_FONT } from './common';
-import { palette } from './layout';
+import { CAR_SKINS, palette } from './layout';
 import { glowMap, treadMap } from './textures';
 
 // Forward is +z, the car's right is +x (wheel on the right, as in Indonesia).
@@ -21,15 +23,15 @@ const TYRE_W = 0.26;
 function useCarMaterials() {
   return useMemo(() => {
     // metalness kept low: more of it darkens the navy toward black from the top-down camera
-    const paint = new THREE.MeshPhysicalMaterial({ color: palette.navy, metalness: 0.2, roughness: 0.34, clearcoat: 1, clearcoatRoughness: 0.08 });
+    const paint = new THREE.MeshPhysicalMaterial({ color: CAR_SKINS.navy.paint, metalness: 0.2, roughness: 0.34, clearcoat: 1, clearcoatRoughness: 0.08 });
     const cream = new THREE.MeshPhysicalMaterial({ color: palette.cream, roughness: 0.4, clearcoat: 0.8, clearcoatRoughness: 0.15 });
     const teal = new THREE.MeshPhysicalMaterial({ color: palette.teal, roughness: 0.35, clearcoat: 1, clearcoatRoughness: 0.1 });
     const glass = new THREE.MeshPhysicalMaterial({ color: '#2E4250', metalness: 0.2, roughness: 0.05, transparent: true, opacity: 0.55, clearcoat: 1, envMapIntensity: 1.8, depthWrite: false });
     const chrome = new THREE.MeshStandardMaterial({ color: '#E8ECEF', metalness: 1, roughness: 0.18 });
     // matte black plastic for fenders, bumpers, steps and the grille surround
-    const plastic = new THREE.MeshStandardMaterial({ color: '#25272C', roughness: 0.85 });
+    const plastic = new THREE.MeshStandardMaterial({ color: '#3A3D44', roughness: 0.85 });
     const steel = new THREE.MeshStandardMaterial({ color: '#3B3F47', metalness: 0.7, roughness: 0.4 });
-    const trim = new THREE.MeshStandardMaterial({ color: '#2A2D34', roughness: 0.6 });
+    const trim = new THREE.MeshStandardMaterial({ color: '#40444C', roughness: 0.6 });
     const seat = new THREE.MeshStandardMaterial({ color: palette.coral, roughness: 0.8 });
     const head = new THREE.MeshStandardMaterial({ color: '#FFF6D8', emissive: '#FFE3A0', emissiveIntensity: 3 });
     const led = new THREE.MeshStandardMaterial({ color: '#F4FAFF', emissive: '#DDEBFF', emissiveIntensity: 2.4 });
@@ -216,6 +218,11 @@ const SCREEN_TOP: [number, number] = [0.66, 0.26]; // y, z of the windscreen's t
 /** The jeep's looks: body, open cabin with roll cage, lights, off-road wheels and visual suspension. Physics lives in Car. */
 export function CarModel({ chassis, wheels, frontPivots }: Refs) {
   const mats = useCarMaterials();
+  // Repaint the shared body material in place; building a new material would drop it from the merged static parts.
+  const skin = useStore((s) => s.carSkin);
+  useEffect(() => {
+    mats.paint.color.set(CAR_SKINS[skin].paint);
+  }, [mats, skin]);
   const tyre = useMemo(() => tyreGeometry(), []);
   const rim = useMemo(() => rimGeometry(), []);
   const fender = useMemo(() => fenderGeometry(), []);
@@ -227,7 +234,7 @@ export function CarModel({ chassis, wheels, frontPivots }: Refs) {
   // Headlight pool painted on the ground: an additive glow decal instead of real spotlights, which
   // would add a light to every lit pixel in the scene (80k grass blades included).
   const beamMaterial = useMemo(
-    () => new THREE.MeshBasicMaterial({ map: glowMap(), color: '#FFE2A6', transparent: true, opacity: 0.28, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false }),
+    () => trackHeadlight(new THREE.MeshBasicMaterial({ map: glowMap(), color: '#FFE2A6', transparent: true, opacity: 0.28, blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false })),
     [],
   );
 

@@ -1,10 +1,14 @@
 import { Suspense, lazy, useEffect, useMemo, useState } from 'react';
 import { input, resetInput, useStore } from './store';
+import { Toast } from './ui/Toast';
+import { CircuitHud } from './ui/CircuitHud';
 import { Classic } from './ui/Classic';
 import { InputDebug, KeyHints, Loader, TopBar, TouchControls } from './ui/Hud';
 import { DriveHud } from './ui/DriveHud';
+import { BigMap } from './ui/BigMap';
+import { Menu } from './ui/Menu';
 import { SpotCard } from './ui/SpotCard';
-import { primaryLink } from './ui/primaryLink';
+import { openPrimaryLink } from './ui/primaryLink';
 
 // The 3D side (three.js, R3F, drei, Rapier WASM) is the heavy part, so the canvas and world load in their
 // own chunk; this main chunk is just React + the HTML UI, which paints the loader and classic view at once.
@@ -58,25 +62,39 @@ export default function App() {
 
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
-      if (useStore.getState().classicOpen) {
+      const st = useStore.getState();
+      if (st.classicOpen) {
         if (e.code === 'Escape') setClassic(false);
+        return;
+      }
+      // Menu or map open: keys belong to the panel (Tab, arrows on the volume slider, Space on a button).
+      if (st.menuOpen || st.mapOpen) {
+        if (e.code === 'Escape') {
+          st.setMenu(null);
+          st.setMap(false);
+        } else if (e.code === 'KeyM' && st.mapOpen && !e.repeat) st.setMap(false);
         return;
       }
       if (DRIVE_KEYS.includes(e.code)) e.preventDefault();
       // Cmd/Ctrl/Alt combos are browser or OS shortcuts, not driving. On macOS the letter
       // in a Cmd combo never fires keyup, so adding it would leave the car driving itself.
-      if (e.metaKey || e.ctrlKey || e.altKey) return;
-      if (e.code === 'KeyR') input.resetRequested = true;
-      if (e.code === 'KeyM' && !e.repeat) useStore.getState().setMuted(!useStore.getState().muted);
-      if (e.code === 'Enter' && useStore.getState().started) {
-        const href = primaryLink(useStore.getState().spot);
-        if (href) window.open(href, '_blank', 'noopener');
+      // Left Ctrl is the brake: let its own keydown through, it is the one key that arrives with ctrlKey set.
+      if (e.code === 'ControlLeft') {
+        input.keys.add(e.code);
+        return;
       }
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      if (e.code === 'KeyR') input.respawnNearestRequested = true;
+      if (e.code === 'KeyL' && !e.repeat) useStore.getState().setMuted(!useStore.getState().muted);
+      if (e.code === 'KeyM' && !e.repeat && st.started) st.setMap(true);
+      // when a link opens, also keep Enter from pressing whichever button still has focus (like the ☰ Menu button)
+      if (e.code === 'Enter' && st.started && openPrimaryLink()) e.preventDefault();
       input.keys.add(e.code);
     };
     const up = (e: KeyboardEvent) => {
       // Stop Space from "clicking" a focused HTML button (e.g. a teleport button) while braking.
-      if (DRIVE_KEYS.includes(e.code) && !useStore.getState().classicOpen) e.preventDefault();
+      const open = useStore.getState();
+      if (DRIVE_KEYS.includes(e.code) && !open.classicOpen && !open.menuOpen && !open.mapOpen) e.preventDefault();
       // Releasing Cmd can swallow the keyup of letters pressed with it, so drop everything.
       if (e.key === 'Meta') resetInput();
       input.keys.delete(e.code);
@@ -110,6 +128,10 @@ export default function App() {
       <SpotCard />
       <KeyHints />
       <TouchControls />
+      <Menu />
+      <BigMap />
+      <Toast />
+      <CircuitHud />
       {debug && <InputDebug />}
       <Loader />
       {classicOpen && <Classic />}

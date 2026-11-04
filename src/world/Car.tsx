@@ -3,8 +3,11 @@ import { useFrame, useThree } from '@react-three/fiber';
 import { CoefficientCombineRule, RigidBody, RoundCuboidCollider, useBeforePhysicsStep, useRapier, type CollisionEnterPayload, type RapierRigidBody } from '@react-three/rapier';
 import * as THREE from 'three';
 import { input, readDriveInput, useStore } from '../store';
-import { inRiver, pondDistance, zones } from './layout';
-import { impact, updateCarAudio, updateListener, type SurfaceMaterial } from '../ui/sound';
+import { inRiver, nearestZone, pondDistance, zones, type ZoneId } from './layout';
+import { AIRTIME_GOAL, SPEED_GOAL, addHonk, addJump, tickPlayTime, unlock, visitZone } from '../game/achievements';
+import { cancelLap } from '../game/circuit';
+import { openPrimaryLink } from '../ui/primaryLink';
+import { impact, updateAmbience, updateCarAudio, updateListener, whoosh, type SurfaceMaterial } from '../ui/sound';
 import { emitImpact } from './impactQueue';
 import { CarModel } from './CarModel';
 import { carState } from './carState';
@@ -21,6 +24,12 @@ const GRIP = 10;
 const RIDE_HEIGHT = 0.4; // distance from body centre to the bottom of the wheels
 const ROLLING_RESISTANCE = 2; // constant deceleration when coasting, m/s²
 const PARK_SPEED = 0.3; // below this with no throttle the parking brake holds the car
+const JUMP_SPEED = 7.5; // upward speed of a jump; with gravity 25 that is about 1.1 m high
+const INTRO_SECONDS = 2; // how long the camera takes to drop from the island view to the car
+const INTRO_EXTRA_ZOOM = 0.4; // the intro starts 1.4x further out than the normal follow distance
+const easeInOutCubic = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
+const ZONE_VISIT_RADIUS = 6; // metres from an area's spawn point that count as having visited it
+const ZONE_IDS = Object.keys(zones) as ZoneId[];
 const CAR_GRASS_RADIUS = 1.8;
 const WATER_SPEED = 0.45; // top speed multiplier while wading through the pond or the river
 const WATER_DRAG = 1.5;
@@ -33,6 +42,14 @@ const VEL_HISTORY = 6; // physics steps (~0.1 s at 60 Hz)
 
 const CAMERA_OFFSET = new THREE.Vector3(4, 14, 14);
 let zoom = 1;
+// Dragging the mouse swings the camera around the car; it eases back to the default angle after a pause.
+const UP = new THREE.Vector3(0, 1, 0);
+const ORBIT_SPEED = 0.005; // radians per pixel dragged
+const ORBIT_RETURN_MS = 3000;
+let orbit = 0;
+let lastDragAt = 0;
+let dragging = false;
+const tmpOffset = new THREE.Vector3();
 
 const tmpQuat = new THREE.Quaternion();
 const tmpForward = new THREE.Vector3();
@@ -48,9 +65,16 @@ export function Car() {
   const lookAt = useRef(new THREE.Vector3());
   const tilt = useRef({ pitch: 0, roll: 0 });
   const parked = useRef(false);
+  // Jump fires on the press, not while held. Starts true so the Space that closed the loader doesn't jump.
+  const jumpHeld = useRef(true);
+  const hornHeld = useRef(false);
+  // the camera's start-of-intro pose, filled in on the first driving frame
+  const introRef = useRef<{ done: boolean; from: THREE.Vector3 | null; look: THREE.Vector3 | null; t0: number }>({ done: false, from: null, look: null, t0: 0 });
+  const airTime = useRef(0);
   const actor = useRef<Actor>({ x: 0, z: 0, radius: 0 });
   const { rapier, world } = useRapier();
   const camera = useThree((s) => s.camera);
+  const canvas = useThree((s) => s.gl.domElement);
   const viewport = useThree((s) => s.size);
   // Portrait phones see less of the world sideways, so pull the camera back.
   const aspectZoom = viewport.width / viewport.height < 0.8 ? 1.6 : 1;
@@ -107,6 +131,7 @@ export function Car() {
   useEffect(() => {
     if (!teleport) return;
     const z = zones[teleport.zone];
+    cancelLap();
     place(z.spawn[0], z.spawn[1], z.yaw);
   }, [teleport]);
 
@@ -119,11 +144,48 @@ export function Car() {
   // Scroll to zoom the camera in and out.
   useEffect(() => {
     const onWheel = (e: WheelEvent) => {
+      // scrolling a panel must not zoom the world behind it
+      const st = useStore.getState();
+      if (st.menuOpen || st.mapOpen) return;
       zoom = THREE.MathUtils.clamp(zoom + e.deltaY * 0.0008, 0.55, 1.6);
     };
     window.addEventListener('wheel', onWheel, { passive: true });
     return () => window.removeEventListener('wheel', onWheel);
   }, []);
+
+  // Drag with the left mouse button on the canvas to orbit the camera. Only the canvas listens, so clicking
+  // the HUD never turns the view, and touch is left alone (it has the joystick). Steering stays relative to the car.
+  useEffect(() => {
+    const down = (e: PointerEvent) => {
+      if (e.pointerType !== 'mouse' || e.button !== 0) return;
+      dragging = true;
+      lastDragAt = performance.now();
+      canvas.setPointerCapture(e.pointerId);
+      canvas.style.cursor = 'grabbing';
+    };
+    const move = (e: PointerEvent) => {
+      if (!dragging) return;
+      orbit += e.movementX * ORBIT_SPEED;
+      lastDragAt = performance.now();
+    };
+    const up = () => {
+      dragging = false;
+      lastDragAt = performance.now();
+      canvas.style.cursor = '';
+    };
+    canvas.addEventListener('pointerdown', down);
+    canvas.addEventListener('pointermove', move);
+    canvas.addEventListener('pointerup', up);
+    canvas.addEventListener('pointercancel', up);
+    return () => {
+      canvas.removeEventListener('pointerdown', down);
+      canvas.removeEventListener('pointermove', move);
+      canvas.removeEventListener('pointerup', up);
+      canvas.removeEventListener('pointercancel', up);
+      dragging = false;
+      canvas.style.cursor = '';
+    };
+  }, [canvas]);
 
   useFrame(({ clock }, rawDt) => {
     const rb = body.current;
@@ -154,13 +216,47 @@ export function Car() {
     actor.current.z = pos.z;
     actor.current.radius = grounded ? CAR_GRASS_RADIUS : 0;
 
-    if (pos.y < -10 || input.resetRequested) {
-      input.resetRequested = false;
-      place(zones.home.spawn[0], zones.home.spawn[1], zones.home.yaw);
+    // Falling off the island or asking for help both land on the closest area's spawn, not always on Home.
+    if (pos.y < -10 || input.respawnNearestRequested) {
+      if (pos.y < -10) unlock('abyss');
+      cancelLap(); // a respawn mid-lap would be a shortcut
+      input.respawnNearestRequested = false;
+      const zn = nearestZone(pos.x, pos.z);
+      place(zn.spawn[0], zn.spawn[1], zn.yaw);
       return;
     }
 
-    const drive = started ? readDriveInput() : { throttle: 0, steer: 0, brake: false, boost: false, horn: false };
+    // A gamepad keeps reporting while the menu or the map is open, so the car ignores all input then.
+    const ui = useStore.getState();
+    const drive = started && !ui.menuOpen && !ui.mapOpen ? readDriveInput() : { throttle: 0, steer: 0, brake: false, jump: false, boost: false, horn: false };
+    if (input.openLinkRequested) {
+      input.openLinkRequested = false;
+      openPrimaryLink();
+    }
+    if (!started) jumpHeld.current = true;
+    let jumped = false;
+    if (drive.jump && !jumpHeld.current && grounded) {
+      // Free the parking brake first, then set the vertical speed directly: an impulse would depend on the mass.
+      if (parked.current) {
+        parked.current = carState.parked = false;
+        rb.setEnabledTranslations(true, true, true, true);
+      }
+      rb.setLinvel({ x: vel.x, y: JUMP_SPEED, z: vel.z }, true);
+      carState.jumps++;
+      addJump();
+      jumped = true;
+    }
+    jumpHeld.current = drive.jump;
+    if (started) {
+      // achievements: cheap checks, each one a no-op once unlocked
+      tickPlayTime(dt);
+      airTime.current = grounded ? 0 : airTime.current + dt;
+      if (airTime.current > AIRTIME_GOAL) unlock('airtime');
+      if (fwdSpeed > SPEED_GOAL) unlock('speed');
+      if (drive.horn && !hornHeld.current) addHonk();
+      hornHeld.current = drive.horn;
+      for (const id of ZONE_IDS) if (Math.hypot(pos.x - zones[id].spawn[0], pos.z - zones[id].spawn[1]) < ZONE_VISIT_RADIUS) visitZone(id);
+    }
     carState.throttle = drive.throttle;
     carState.brake = drive.brake;
     carState.boost = drive.boost && drive.throttle > 0;
@@ -169,7 +265,8 @@ export function Car() {
 
     // Parking brake: with no throttle and almost no speed on the ground, pin the car in x/z so it
     // cannot creep down the ramp or keep sliding after a bump. Any throttle or leaving the ground frees it.
-    const shouldPark = grounded && drive.throttle === 0 && Math.hypot(vel.x, vel.z) < PARK_SPEED;
+    // (not on the frame of a jump: the park branch below would write the old vertical speed back)
+    const shouldPark = !jumped && grounded && drive.throttle === 0 && Math.hypot(vel.x, vel.z) < PARK_SPEED;
     if (shouldPark !== parked.current) {
       parked.current = carState.parked = shouldPark;
       rb.setEnabledTranslations(!shouldPark, true, !shouldPark, true);
@@ -177,7 +274,9 @@ export function Car() {
     }
 
     if (grounded) {
-      const wet = pondDistance(pos.x, pos.z) < 1 || inRiver(pos.x, pos.z);
+      const inWater = inRiver(pos.x, pos.z);
+      if (inWater) unlock('wet');
+      const wet = pondDistance(pos.x, pos.z) < 1 || inWater;
       const top = (drive.boost ? BOOST_SPEED : MAX_SPEED) * (wet ? WATER_SPEED : 1);
       let push = 0;
       if (drive.throttle > 0 && fwdSpeed < top) push = drive.throttle * ACCEL * (drive.boost ? 1.35 : 1);
@@ -223,12 +322,38 @@ export function Car() {
       camera.lookAt(lookAt.current);
     } else {
       // Camera: fixed isometric-ish angle that trails the car smoothly.
+      if (orbit !== 0 && !dragging && performance.now() - lastDragAt > ORBIT_RETURN_MS) {
+        // take the short way round, then glide back to the default angle (instantly with reduced motion)
+        orbit = THREE.MathUtils.euclideanModulo(orbit + Math.PI, Math.PI * 2) - Math.PI;
+        orbit = still || Math.abs(orbit) < 0.001 ? 0 : THREE.MathUtils.lerp(orbit, 0, 1 - Math.exp(-1.5 * dt));
+      }
+      carState.orbit = orbit;
       const target = new THREE.Vector3(pos.x, 0, pos.z);
-      const desired = target.clone().add(CAMERA_OFFSET.clone().multiplyScalar(zoom * aspectZoom));
-      const k = 1 - Math.exp(-(camera.position.distanceTo(desired) > 25 ? 2 : 4) * dt);
-      camera.position.lerp(desired, k);
-      lookAt.current.lerp(target, k);
-      camera.lookAt(lookAt.current);
+      const intro = introRef.current;
+      if (!intro.done) {
+        // Intro: ease the camera from the island orbit down to the car over INTRO_SECONDS, starting a bit
+        // zoomed out. Driving input is already live. Reduced motion skips straight to the follow position.
+        if (!intro.from) {
+          intro.from = camera.position.clone();
+          intro.look = lookAt.current.clone();
+          intro.t0 = clock.elapsedTime;
+          if (!still) whoosh();
+        }
+        const p = still ? 1 : Math.min(1, (clock.elapsedTime - intro.t0) / INTRO_SECONDS);
+        const e = easeInOutCubic(p);
+        tmpOffset.copy(CAMERA_OFFSET).multiplyScalar(zoom * aspectZoom * (1 + INTRO_EXTRA_ZOOM * (1 - e))).applyAxisAngle(UP, orbit);
+        camera.position.lerpVectors(intro.from, target.clone().add(tmpOffset), e);
+        lookAt.current.lerpVectors(intro.look!, target, e);
+        camera.lookAt(lookAt.current);
+        if (p >= 1) intro.done = true;
+      } else {
+        tmpOffset.copy(CAMERA_OFFSET).multiplyScalar(zoom * aspectZoom).applyAxisAngle(UP, orbit);
+        const desired = target.clone().add(tmpOffset);
+        const k = 1 - Math.exp(-(camera.position.distanceTo(desired) > 25 ? 2 : 4) * dt);
+        camera.position.lerp(desired, k);
+        lookAt.current.lerp(target, k);
+        camera.lookAt(lookAt.current);
+      }
     }
     // Short decaying jolt after a hard crash; the follow lerp above pulls the camera back next frame.
     if (shake.current > 0.01 && !still) {
@@ -243,6 +368,7 @@ export function Car() {
     camera.getWorldDirection(tmpForward);
     tmpUp.set(0, 1, 0).applyQuaternion(camera.quaternion);
     updateListener(camera.position, tmpForward, tmpUp);
+    updateAmbience(pos.x, pos.z);
     updateCarAudio({
       x: pos.x,
       y: pos.y,

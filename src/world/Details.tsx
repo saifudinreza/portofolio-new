@@ -6,6 +6,8 @@ import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 import { WORLD_SIZE, distanceToSegment, isClear, palette, pond, pondDistance, rng, roadSegments, trails } from './layout';
 import { carState } from './carState';
+import { windUniforms } from './wind';
+import { trackLamp } from './dayCycle';
 import { woodMap } from './textures';
 import { setCardShare, shrubParts } from './foliage';
 import { useStore } from '../store';
@@ -191,7 +193,7 @@ function useFurniture() {
       benches,
       meshes: [
         instanced(lampGeo, metal, lampItems),
-        instanced(bulbGeo, new THREE.MeshStandardMaterial({ color: '#FFF1C9', emissive: '#FFC26B', emissiveIntensity: 2.6, roughness: 0.3 }), lampItems, false),
+        instanced(bulbGeo, trackLamp(new THREE.MeshStandardMaterial({ color: '#FFF1C9', emissive: '#FFC26B', emissiveIntensity: 2.6, roughness: 0.3 })), lampItems, false),
         instanced(new THREE.BoxGeometry(0.1, 0.9, 0.1), wood, posts),
         instanced(new THREE.BoxGeometry(0.05, 0.1, 1), wood, rails),
         instanced(benchGeo, wood, benchItems),
@@ -270,14 +272,16 @@ export function Details() {
 
     // A handful of leaves drift past the car on the breeze and respawn upwind when they land.
     const { leafMesh, leaves } = critters;
+    const wind = windUniforms.uWindDir.value;
+    const strength = windUniforms.uWindStrength.value;
     leaves.forEach((l, i) => {
       if (l.y < 0.05 || Math.hypot(l.x - carState.x, l.z - carState.z) > 26) {
         l.x = carState.x - 14 + Math.random() * 10;
         l.z = carState.z - 10 + (Math.random() - 0.3) * 24;
         l.y = 2 + Math.random() * 4;
       }
-      l.x += (0.9 + Math.sin(t * 0.7 + l.seed) * 0.4) * dt * 1.6;
-      l.z += (0.45 + Math.cos(t * 0.9 + l.seed) * 0.5) * dt * 1.2;
+      l.x += (wind.x * strength + Math.sin(t * 0.7 + l.seed) * 0.4) * dt * 1.6;
+      l.z += (wind.y * strength + Math.cos(t * 0.9 + l.seed) * 0.5) * dt * 1.2;
       l.y -= (0.35 + Math.sin(t * 2 + l.seed) * 0.15) * dt;
       l.spin += dt * 3;
       leafMesh.setMatrixAt(i, tmp.m.compose(tmp.p.set(l.x, l.y, l.z), tmp.q.setFromEuler(tmp.e.set(Math.sin(l.spin) * 1.2, l.spin, Math.cos(l.spin * 0.7))), tmp.s.setScalar(1)));

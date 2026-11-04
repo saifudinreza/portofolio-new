@@ -45,21 +45,21 @@ export function pondDistance(x: number, z: number) {
 }
 
 export const palette = {
-  ground: '#F0E0C0',
-  groundEdge: '#D9C29A',
-  path: '#E4CFA6',
+  ground: '#EFD7A6',
+  groundEdge: '#D4B27E',
+  path: '#E3C690',
   navy: '#1F3864',
-  teal: '#2BA89A',
-  coral: '#F26B4F',
-  yellow: '#F5B83D',
+  teal: '#1FA595',
+  coral: '#F2603F',
+  yellow: '#F7B02A',
   wood: '#C68B59',
   woodDark: '#9A6A42',
   dark: '#23262D',
   cream: '#FFF6E6',
-  leaf: '#6BAA5C',
-  leafDark: '#4E8C47',
+  leaf: '#5FAE48',
+  leafDark: '#438A3C',
   rock: '#B9AD9A',
-  sky: '#F6D9A8',
+  sky: '#F8D49A',
 };
 
 /** Jeep paint colours. The default `navy` is lighter than the UI navy so the body reads from the top-down camera. */

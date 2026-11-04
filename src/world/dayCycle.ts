@@ -39,8 +39,8 @@ type Keyframe = {
 const night: Omit<Keyframe, 't'> = {
   sun: '#A9BCFF', sunIntensity: 0.55, sunHeight: 18, // moonlight
   hemiSky: '#6272A8', hemiGround: '#2E344C', hemiIntensity: 0.6,
-  horizon: '#2D3A66', zenith: '#0F1733', fog: '#26335A', sunGlow: 0.25,
-  lamp: 2, env: 0.4, headlight: 2.6, cloud: 0.15, night: 1,
+  horizon: '#2A3A70', zenith: '#0C1536', fog: '#222F5E', sunGlow: 0.25,
+  lamp: 2.6, env: 0.4, headlight: 2.6, cloud: 0.15, night: 1,
 };
 const KEYS: Keyframe[] = [
   { t: 0, ...night },
@@ -52,9 +52,9 @@ const KEYS: Keyframe[] = [
   },
   {
     // day: the values the rest of the code was written with
-    t: 0.5, sun: '#FFE2B6', sunIntensity: 2.3, sunHeight: 22,
-    hemiSky: '#FFF4E0', hemiGround: '#C9A77A', hemiIntensity: 1,
-    horizon: palette.sky, zenith: '#A9D8DA', fog: palette.sky, sunGlow: 1,
+    t: 0.5, sun: '#FFD9A0', sunIntensity: 2.5, sunHeight: 22,
+    hemiSky: '#FFE9CC', hemiGround: '#C08F62', hemiIntensity: 0.92,
+    horizon: palette.sky, zenith: '#8FCFD6', fog: palette.sky, sunGlow: 1,
     lamp: 1, env: 1, headlight: 1, cloud: 1, night: 0,
   },
   {

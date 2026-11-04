@@ -82,6 +82,8 @@ Give Zare World a distinctive and consistent visual identity.
 **Category:** Environment Design  
 **Status:** PARTIAL
 
+> **Update M2d (#36):** art direction tertulis (`docs/art-direction.md`), palet dan cahaya lebih jenuh; menunggu merge. Milestone 2 selesai setelah merge.
+>
 > **Update M2c (#35):** tunggul, kayu, peti, daun gugur di padang, mercusuar, pagar dan bangku tambahan; menunggu merge.
 >
 > **Update M2b (#34):** semak berkelompok di tepi jalan dan tepi pulau, variasi warna musim gugur, 88 pohon; menunggu merge.

@@ -49,7 +49,7 @@ const AO_TRIAL_SECONDS = 3;
  */
 export function PostFx() {
   const [ao, setAo] = useState(true);
-  const splitTone = useMemo(() => new SplitToneEffect('#3F9098', '#F4B577', 0.16), []);
+  const splitTone = useMemo(() => new SplitToneEffect('#3F9098', '#F4B577', 0.2), []);
   const trial = useRef({ time: 0, frames: 0, done: false });
 
   useFrame((_, dt) => {
@@ -68,14 +68,14 @@ export function PostFx() {
   return (
     <EffectComposer multisampling={0} enableNormalPass={false}>
       {ao ? <N8AO halfRes quality="performance" aoRadius={1.6} distanceFalloff={0.6} intensity={2.2} color="#3A2A1C" /> : <></>}
-      <Bloom mipmapBlur luminanceThreshold={1.2} luminanceSmoothing={0.25} intensity={0.6} />
+      <Bloom mipmapBlur luminanceThreshold={1.0} luminanceSmoothing={0.25} intensity={0.72} />
       {/* a light tilt-shift: the band around the car stays sharp, the top and bottom of the view soften like a
           miniature. It blurs before tone mapping and grading so every colour step sees the same image. */}
       <TiltShift2 blur={0.1} taper={0.6} samples={8} start={[0, 0.5]} end={[1, 0.5]} />
       <ToneMapping mode={ToneMappingMode.ACES_FILMIC} />
       <primitive object={splitTone} />
-      <HueSaturation saturation={0.08} />
-      <BrightnessContrast brightness={0.01} contrast={0.06} />
+      <HueSaturation saturation={0.2} />
+      <BrightnessContrast brightness={0} contrast={0.1} />
       <Vignette offset={0.32} darkness={0.42} />
       <SMAA />
     </EffectComposer>

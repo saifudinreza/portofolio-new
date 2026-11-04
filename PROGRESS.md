@@ -31,7 +31,7 @@
 |---|---|---|---|
 | 0 — Audit | ISSUE-000 | IN PROGRESS | — |
 | 1 — Stability | ISSUE-014, 020 | IN PROGRESS (PR open) | #32 |
-| 2 — Visual overhaul | ISSUE-001 to 003 (2a-2d) | IN PROGRESS: 2a done, 2b PR open | #33 (2a), #34 (2b), #35 (2c), #36 (2d) |
+| 2 — Visual overhaul | ISSUE-001 to 003 (2a-2d) | IN PROGRESS: 2a, 2b done; 2c PR open | #33 (2a), #34 (2b), #35 (2c), #36 (2d) |
 | 3 — Performance | ISSUE-017, 018, 016 | TODO | #37 |
 | 4 — Driving | ISSUE-004 to 007 | TODO | #38 |
 | 5 — Portfolio | ISSUE-008 to 009 | TODO | #39 |
@@ -152,6 +152,11 @@ _Add reproducible bugs, blockers, and relevant browser/device details here._
 - Created this progress tracker.
 - Next action: perform ISSUE-000 (codebase audit).
 - No implementation status has been assumed or marked complete.
+
+### 2026-11-04 (M2c / #35)
+- `world/Scenery.tsx` (baru, semua instanced): 16 tunggul dengan 60% kayu gelondongan di sebelahnya, 12 tumpukan peti (padat, collider), 260 daun gugur di padang (tidak di Low), dan mercusuar di barat daya (-41, 38) sebagai landmark. Di `Details.tsx`: 5 pagar tambahan dan bangku di tepi jalan (hanya yang lolos pengecekan ruang terbuka).
+- `?stats` di Home (sebelum → sesudah): draw call 209/378/398 → 213/386/406 (Low/Med/High); segitiga +17k (Scenery 16.7k). FPS tidak diukur.
+- Landmark per zona: Home (huruf REZA), Projects (halaman berpaving), Skills (gudang), About, Contact (pad) sudah punya struktur sendiri; tidak ditambah struktur baru per zona, hanya satu landmark jauh (mercusuar).
 
 ### 2026-11-04 (M2b / #34)
 - Semak tambahan berkelompok di tepi jalan (mulai 14 m dari plaza agar papan petunjuk tidak tertutup) dan di tepi pulau, hanya di Medium/High; Low tetap 70 semak asli.

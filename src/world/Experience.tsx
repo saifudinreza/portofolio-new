@@ -5,6 +5,7 @@ import { useStore } from '../store';
 import { Car } from './Car';
 import { CarFx } from './CarFx';
 import { Letters } from './Letters';
+import { Circuit } from './Circuit';
 import { AboutArea, ContactArea, ProjectsArea, Warehouse } from './Zones';
 import { Ground, HomeText, Lights, Paths, Playground } from './Environment';
 import { Cliffs, Clouds, EnvLighting, Sea, Sky } from './Atmosphere';
@@ -67,6 +68,7 @@ export function Experience({ debug = false }: { debug?: boolean }) {
           <HomeText />
           <Letters text="REZA" size={2.6} depth={0.9} position={[0, 0, -3]} colors={letterColors} gap={0.25} />
           <Playground />
+          <Circuit />
           <Trees />
           <Grass />
           <Details />

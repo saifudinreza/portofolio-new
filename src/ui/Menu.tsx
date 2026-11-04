@@ -83,6 +83,7 @@ function ControlsPanel() {
           [['Scroll'], 'Zoom'],
         ]}
       />
+      <p className="muted">Time trial: drive through the red START gate on the Skills road, then follow the glowing gates back to it.</p>
       <h3>Phone and tablet</h3>
       <Keys
         rows={[

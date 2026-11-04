@@ -5,7 +5,9 @@ import type { CarSkin } from '../world/layout';
 // Achievements live in their own small store (not the main one) so the game code can report events from
 // anywhere without an import cycle. Everything is saved in localStorage; storage can be blocked, so it never throws.
 
-export type AchievementId = 'all-projects' | 'all-zones' | 'open-live' | 'airtime' | 'jumper' | 'speed' | 'wet' | 'honk' | 'abyss' | 'classic';
+export type AchievementId =
+  | 'all-projects' | 'all-zones' | 'open-live' | 'airtime' | 'jumper' | 'speed' | 'wet' | 'honk' | 'abyss' | 'classic'
+  | 'circuit' | 'circuit-fast';
 
 export type Achievement = {
   id: AchievementId;
@@ -23,6 +25,8 @@ export const HONK_GOAL = 20;
 /** Boost top speed is 19 m/s; the car needs a moment of full boost on flat ground to get this close. */
 export const SPEED_GOAL = 18;
 export const AIRTIME_GOAL = 1.2;
+/** Time-trial target. A first estimate from the lap length (about 100 m with a U-turn); tune after playing. */
+export const CIRCUIT_FAST_SECONDS = 18;
 
 export const ACHIEVEMENTS: Achievement[] = [
   { id: 'all-projects', title: 'Window shopper', description: 'Park on every project pad.', goal: projects.length },
@@ -35,6 +39,8 @@ export const ACHIEVEMENTS: Achievement[] = [
   { id: 'honk', title: 'Beep beep', description: `Honk the horn ${HONK_GOAL} times.`, goal: HONK_GOAL },
   { id: 'abyss', title: 'Edge of the world', description: 'Fall off the island.', secret: true },
   { id: 'classic', title: 'Recruiter mode', description: 'Open the classic view.' },
+  { id: 'circuit', title: 'Lap of honour', description: 'Finish a time-trial lap: drive through the START gate on the Skills road.' },
+  { id: 'circuit-fast', title: 'Speed demon', description: `Finish a lap in under ${CIRCUIT_FAST_SECONDS} seconds.` },
 ];
 
 /** Jeep paint jobs and what unlocks them. Blue is always there; the others are rewards. */

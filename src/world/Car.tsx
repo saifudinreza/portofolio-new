@@ -5,6 +5,7 @@ import * as THREE from 'three';
 import { input, readDriveInput, useStore } from '../store';
 import { inRiver, nearestZone, pondDistance, zones, type ZoneId } from './layout';
 import { AIRTIME_GOAL, SPEED_GOAL, addHonk, addJump, tickPlayTime, unlock, visitZone } from '../game/achievements';
+import { cancelLap } from '../game/circuit';
 import { impact, updateAmbience, updateCarAudio, updateListener, whoosh, type SurfaceMaterial } from '../ui/sound';
 import { emitImpact } from './impactQueue';
 import { CarModel } from './CarModel';
@@ -129,6 +130,7 @@ export function Car() {
   useEffect(() => {
     if (!teleport) return;
     const z = zones[teleport.zone];
+    cancelLap();
     place(z.spawn[0], z.spawn[1], z.yaw);
   }, [teleport]);
 
@@ -216,6 +218,7 @@ export function Car() {
     // Falling off the island or asking for help both land on the closest area's spawn, not always on Home.
     if (pos.y < -10 || input.respawnNearestRequested) {
       if (pos.y < -10) unlock('abyss');
+      cancelLap(); // a respawn mid-lap would be a shortcut
       input.respawnNearestRequested = false;
       const zn = nearestZone(pos.x, pos.z);
       place(zn.spawn[0], zn.spawn[1], zn.yaw);

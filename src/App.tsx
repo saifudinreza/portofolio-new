@@ -2,6 +2,7 @@ import { Suspense, lazy, useEffect, useMemo, useState } from 'react';
 import { input, resetInput, useStore } from './store';
 import { unlock } from './game/achievements';
 import { Toast } from './ui/Toast';
+import { CircuitHud } from './ui/CircuitHud';
 import { Classic } from './ui/Classic';
 import { InputDebug, KeyHints, Loader, TopBar, TouchControls } from './ui/Hud';
 import { DriveHud } from './ui/DriveHud';
@@ -138,6 +139,7 @@ export default function App() {
       <Menu />
       <BigMap />
       <Toast />
+      <CircuitHud />
       {debug && <InputDebug />}
       <Loader />
       {classicOpen && <Classic />}

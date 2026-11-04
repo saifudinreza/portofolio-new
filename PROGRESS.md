@@ -36,7 +36,7 @@
 | 4 — Driving | ISSUE-004 to 007 | DONE kecuali playtest manusia | #38 |
 | 5 — Portfolio | ISSUE-008 to 009 | DONE kecuali thumbnail proyek | #39 |
 | 6 — Exploration | ISSUE-010 to 013 | DONE kecuali musik berlisensi dan playtest | #40 |
-| 7 — Device testing | ISSUE-019, 020 | TODO | #41 |
+| 7 — Device testing | ISSUE-019, 020 | IN PROGRESS: uji otomatis selesai; menunggu HP asli dan Firefox/Chrome | #41 |
 
 ---
 
@@ -162,6 +162,18 @@ _Add reproducible bugs, blockers, and relevant browser/device details here._
 - **Kebocoran kecil yang tersisa:** +1 tekstur GPU (kecil) setiap kali tier naik dari Low ke Medium (tidak terjadi Medium ↔ High). Bukan `scene.environment` (sudah dicoba dibuang, tidak berpengaruh); kemungkinan di dalam drei `Environment`. Diabaikan: auto-quality hanya flip-flop maksimum 4 kali lalu berhenti.
 - **Pemecahan chunk dicoba dan dibatalkan:** `manualChunks` (three / r3f / rapier) membuat `index.html` memuat `physics-wasm` (842 kB gzip) dan `r3f` (479 kB gzip) lebih dulu lewat modulepreload, merusak pemuatan malas (halaman awal tidak boleh mengunduh 3D). Rapier + WASM base64 ternyata bagian terbesar chunk Scene (±2,2 MB dari 3,5 MB). Ukuran total gzip tidak berubah, jadi tidak dipakai.
 - **Menunggu pemilik:** FPS di GPU asli (Low/Medium/High di Home, Projects, sungai; desktop dan HP) lewat `?stats`, lalu optimasi yang terbukti (instancing zona, bayangan benda kecil).
+
+### 2026-11-05 (M7 / #41, bagian otomatis)
+Lingkungan uji: hanya Edge dan Brave (keduanya Chromium) terpasang; Chrome dan Firefox tidak ada, dan tidak ada HP asli. Semua uji memakai build produksi (`vite preview`), GPU software (SwiftShader), sehingga FPS tidak bermakna.
+- **Tautan eksternal:** 14 tautan (6 proyek x live/source dari `profile.ts`, profil GitHub, LinkedIn, repo, situs live) menjawab HTTP 200 (LinkedIn 200 dengan user-agent browser; `mailto:` tidak bisa dicek otomatis).
+- **Alur lengkap di Edge dan Brave (12 langkah, semua lolos, tanpa error):** muat dan loader siap, Start, mengemudi (throttle 1), Menu dan 4 tab, Big map (M) dan Esc, teleport ke Projects/About/Experience/Contact, Classic view dan Esc, tab tersembunyi (input direset, audio suspend), refresh lalu Start lagi.
+- **Konsol:** sebelumnya ±170 peringatan, hampir semuanya `toNonIndexed()` pada geometri yang sudah non-indexed (dari kode sendiri). Diperbaiki dengan `world/quietThree.ts` (mengembalikan geometri yang sama tanpa peringatan). Sisa 4 jenis: `THREE.Clock` deprecated (R3F), "deprecated parameters for the initialization function" (Rapier), dan 2 pesan "GPU stall ReadPixels" (khas GPU software); semuanya dari library atau lingkungan uji, bukan error.
+- **Emulasi HP/tablet (Edge, sentuh + pointer kasar):** 390x844, 360x640, 844x390, 768x1024, masing-masing juga setelah diputar. Joystick menggerakkan mobil (throttle 0,97) dan melepasnya mereset ke 0; Menu muat di layar; tombol Start terjangkau di 320x568 sampai 844x390.
+- **Bug yang ditemukan dan diperbaiki:**
+  1. Tap tombol Jump yang lebih singkat dari satu frame tidak tercatat (mobil membaca input sekali per frame; di HP lemah tap 60 ms bisa jatuh di antara dua frame). Perbaikan: `input.jumpLatch` (juga untuk Space).
+  2. Minimap dan speedometer menimpa tombol kontrol di HP landscape dan tablet. Perbaikan: di semua layar sentuh HUD pindah ke kanan atas di bawah top bar (ukuran lebih kecil di landscape pendek).
+  3. Top bar terpotong di lebar 761 sampai 900 px (tombol "Classic view" keluar layar, sejak ada tombol Experience). Perbaikan: top bar membungkus ke dua baris di lebar itu (kecuali HP landscape).
+- **Belum bisa dilakukan, perlu pemilik:** uji di HP Android/iPhone asli (rasa kontrol, FPS, tombol getar), Firefox dan Chrome desktop, dan Safari iOS. Hasil emulasi tidak menggantikan HP asli.
 
 ### 2026-11-04 (M6 / #40)
 - **Gem (koleksi):** 12 gem bercahaya (`world/Collectibles.tsx`, satu InstancedMesh untuk gem dan satu untuk berkas cahaya, tanpa berkas di Low). Posisi deterministik dari `layout.ts` (`gemSpots`): 3 di tempat tersembunyi, sisanya tersebar merata (farthest-point sampling) minimal 6 m dari jalan (jarak ke jalan terdekat 9 sampai 57 m); setiap gem ke-4 melayang 2 m sehingga hanya bisa diambil sambil melompat. Pengambilan lewat cek jarak ke mobil tiap frame (12 gem, murah), suara chime, dan toast "Gem found: n of 12".

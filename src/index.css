@@ -360,6 +360,27 @@ kbd {
   .speed-readout { margin-top: -22px; }
 }
 @media (pointer: coarse) { .keyhints { display: none; } }
+/* Any touch screen: the map and speedometer sit at the top right, under the top bar, so they never lie under the control
+   buttons in the bottom corners (tablets and phones held sideways included). Must stay after the max-width rules above. */
+@media (pointer: coarse) {
+  .drive-hud { top: 112px; bottom: auto; right: 10px; flex-direction: column; align-items: flex-end; gap: 8px; }
+}
+@media (pointer: coarse) and (orientation: landscape) and (max-height: 520px) {
+  .drive-hud { top: 78px; }
+  .minimap { width: 96px; height: 96px; border-radius: 12px; }
+  .speedo { width: 96px; padding: 6px 8px 8px; }
+}
+/* a small phone held sideways has two top-bar rows and very little height: a smaller map and speedometer fit above the buttons */
+@media (pointer: coarse) and (orientation: landscape) and (max-height: 520px) and (max-width: 760px) {
+  .drive-hud { top: 108px; gap: 6px; }
+  .minimap { width: 76px; height: 76px; }
+  .speedo { width: 76px; padding: 4px 6px 6px; }
+}
+/* a tablet is wider than the phone layout but too narrow for the whole top bar on one row: let it wrap */
+@media (min-width: 761px) and (max-width: 900px) and (min-height: 521px) {
+  .topbar { flex-wrap: wrap; row-gap: 8px; }
+  .teleports { order: 3; width: 100%; justify-content: space-between; margin-right: 0; }
+}
 
 /* ---------- reduced motion ---------- */
 @media (prefers-reduced-motion: reduce) {

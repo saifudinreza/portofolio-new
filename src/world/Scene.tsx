@@ -2,6 +2,7 @@ import { Suspense, useEffect } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { useProgress } from '@react-three/drei';
 import { useStore, type Tier } from '../store';
+import './quietThree'; // before Experience: it must run before any geometry is built
 import { Experience } from './Experience';
 import { loading } from './loading';
 

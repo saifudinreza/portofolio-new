@@ -13,6 +13,20 @@ export const zones: Record<ZoneId, { label: string; spawn: [number, number]; yaw
   contact: { label: 'Contact', spawn: [10, 30], yaw: Math.PI / 2 },
 };
 
+/** The zone whose spawn point is closest to (x, z): where "I'm stuck" and falling off the island put the car back. */
+export function nearestZone(x: number, z: number) {
+  let best = zones.home;
+  let bestD = Infinity;
+  for (const zn of Object.values(zones)) {
+    const d = Math.hypot(x - zn.spawn[0], z - zn.spawn[1]);
+    if (d < bestD) {
+      bestD = d;
+      best = zn;
+    }
+  }
+  return best;
+}
+
 // Project pads sit on a 3 x 2 grid in the north-east.
 export const projectPadPositions: [number, number][] = [
   [16, -16], [26, -16], [36, -16],

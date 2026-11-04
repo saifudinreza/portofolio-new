@@ -3,7 +3,7 @@ import { useFrame, useThree } from '@react-three/fiber';
 import { CoefficientCombineRule, RigidBody, RoundCuboidCollider, useBeforePhysicsStep, useRapier, type CollisionEnterPayload, type RapierRigidBody } from '@react-three/rapier';
 import * as THREE from 'three';
 import { input, readDriveInput, useStore } from '../store';
-import { inRiver, pondDistance, zones } from './layout';
+import { inRiver, nearestZone, pondDistance, zones } from './layout';
 import { impact, updateCarAudio, updateListener, type SurfaceMaterial } from '../ui/sound';
 import { emitImpact } from './impactQueue';
 import { CarModel } from './CarModel';
@@ -157,9 +157,11 @@ export function Car() {
     actor.current.z = pos.z;
     actor.current.radius = grounded ? CAR_GRASS_RADIUS : 0;
 
-    if (pos.y < -10 || input.resetRequested) {
-      input.resetRequested = false;
-      place(zones.home.spawn[0], zones.home.spawn[1], zones.home.yaw);
+    // Falling off the island or asking for help both land on the closest area's spawn, not always on Home.
+    if (pos.y < -10 || input.respawnNearestRequested) {
+      input.respawnNearestRequested = false;
+      const zn = nearestZone(pos.x, pos.z);
+      place(zn.spawn[0], zn.spawn[1], zn.yaw);
       return;
     }
 

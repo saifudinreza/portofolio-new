@@ -71,7 +71,7 @@ export default function App() {
         return;
       }
       if (e.metaKey || e.ctrlKey || e.altKey) return;
-      if (e.code === 'KeyR') input.resetRequested = true;
+      if (e.code === 'KeyR') input.respawnNearestRequested = true;
       if (e.code === 'KeyL' && !e.repeat) useStore.getState().setMuted(!useStore.getState().muted);
       if (e.code === 'Enter' && useStore.getState().started) {
         const href = primaryLink(useStore.getState().spot);

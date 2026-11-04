@@ -157,7 +157,7 @@ export function HomeText() {
   return (
     <group>
       <GroundText position={[0, 1.6]} size={0.62} color={palette.woodDark} font={BODY_FONT}>Full Stack Web Developer · Kendal, Indonesia</GroundText>
-      <GroundText position={[0, 9.8]} size={0.36} color={palette.woodDark} font={BODY_FONT}>W A S D or arrows to drive · Shift boost · Space jump · B brake · H horn · R reset</GroundText>
+      <GroundText position={[0, 9.8]} size={0.36} color={palette.woodDark} font={BODY_FONT}>W A S D or arrows to drive · Shift boost · Space jump · B brake · H horn · R respawn</GroundText>
     </group>
   );
 }

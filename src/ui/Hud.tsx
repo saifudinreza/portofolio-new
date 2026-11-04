@@ -178,7 +178,7 @@ export function KeyHints() {
       <span><kbd>B</kbd> brake</span>
       <span><kbd>H</kbd> hold horn</span>
       <span><kbd>L</kbd> mute</span>
-      <span><kbd>R</kbd> reset</span>
+      <span><kbd>R</kbd> respawn</span>
       <span>scroll to zoom</span>
     </div>
   );
@@ -304,9 +304,14 @@ export function TouchControls() {
           </>
         )}
       </div>
-      <button className="touch-mode" onClick={switchMode} aria-label={mode === 'joystick' ? 'Use arrow buttons' : 'Use joystick'}>
-        {mode === 'joystick' ? 'Buttons' : 'Stick'}
-      </button>
+      <div className="touch-side">
+        <button className="touch-mode" onClick={() => (input.respawnNearestRequested = true)} aria-label="I'm stuck: put the car back at the nearest area">
+          I'm stuck
+        </button>
+        <button className="touch-mode" onClick={switchMode} aria-label={mode === 'joystick' ? 'Use arrow buttons' : 'Use joystick'}>
+          {mode === 'joystick' ? 'Buttons' : 'Stick'}
+        </button>
+      </div>
       <div className="pad-group right">
         <div className="pad-extras">
           <button aria-label="Jump" className="round jump" {...hold('jump')}><JumpIcon /></button>

@@ -142,7 +142,8 @@ export const input = {
   /** Virtual joystick, −1..1 each way: x right, y forward. Zero when released. */
   joy: { x: 0, y: 0 },
   keys: new Set<string>(),
-  resetRequested: false,
+  /** "I'm stuck": put the car back on the spawn point of the closest area. Set by R, the touch button and the gamepad. */
+  respawnNearestRequested: false,
 };
 
 /** Release everything. Called whenever key/pointer up events may never arrive (blur, hidden tab, overlays). */

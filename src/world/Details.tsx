@@ -19,7 +19,7 @@ const up = new THREE.Vector3(0, 1, 0);
 const meadow = (x: number, z: number, roadMargin: number) =>
   Math.abs(x) < HALF - 2 && Math.abs(z) < HALF - 2 && isClear(x, z, roadMargin) && pondDistance(x, z) > 1.35 && trails.every((t) => distanceToSegment(x, z, t) > 1.6);
 
-function instanced(geometry: THREE.BufferGeometry, material: THREE.Material, items: { m: THREE.Matrix4; color?: string }[], shadow = true) {
+function instanced(geometry: THREE.BufferGeometry, material: THREE.Material, items: { m: THREE.Matrix4; color?: string | THREE.Color }[], shadow = true) {
   const mesh = new THREE.InstancedMesh(geometry, material, Math.max(1, items.length));
   mesh.count = items.length;
   const c = new THREE.Color();
@@ -59,15 +59,53 @@ function useVegetation() {
   return useMemo(() => {
     const r = rng(303);
     const shrub = shrubParts();
-    const bushes: { m: THREE.Matrix4; color: string }[] = [];
+    const bushes: { m: THREE.Matrix4; color: THREE.Color }[] = [];
+    // the leaf colours live in the shrub's vertex colours; per bush the instance colour shifts the lightness, and
+    // now and then the hue (a multiplier on green: yellow and orange for the autumn bushes)
+    const leafTint = (rand: () => number) => {
+      const l = 0.72 + rand() * 0.28;
+      const pick = rand();
+      const [cr, cg, cb] = pick < 0.7 ? [1, 1, 1] : pick < 0.88 ? [1.9, 1.05, 0.35] : [3.2, 0.55, 0.25];
+      return new THREE.Color().setRGB(l * cr, l * cg, l * cb, THREE.LinearSRGBColorSpace);
+    };
+    const addBush = (x: number, z: number, rand: () => number) => {
+      const s = 0.55 + rand() * 0.5;
+      bushes.push({ m: mat(new THREE.Vector3(x, 0, z), rand() * 6.3, new THREE.Vector3(s, s * (0.8 + rand() * 0.3), s)), color: leafTint(rand) });
+    };
     for (let guard = 0; bushes.length < 70 && guard < 4000; guard++) {
       const x = (r() * 2 - 1) * HALF;
       const z = (r() * 2 - 1) * HALF;
       if (!meadow(x, z, 3)) continue;
-      const s = 0.55 + r() * 0.5;
-      // the leaf colours live in the shrub's vertex colours; per bush only the lightness shifts
-      const l = Math.round((0.85 + r() * 0.25) * 255);
-      bushes.push({ m: mat(new THREE.Vector3(x, 0, z), r() * 6.3, new THREE.Vector3(s, s * (0.8 + r() * 0.3), s)), color: `rgb(${l},${l},${l})` });
+      addBush(x, z, r);
+    }
+    const baseBushes = bushes.length; // the original scatter; everything after it is a clustered extra
+    // Extra undergrowth in clusters, drawn on Medium and High only: thickets along the road verges and a green rim
+    // round the island's edge, where the world used to look bare.
+    const e = rng(808);
+    for (const [x1, z1, x2, z2] of roadSegments) {
+      const len = Math.hypot(x2 - x1, z2 - z1);
+      if (len < 8) continue;
+      // start past the fork signboards (all within ~13 m of the plaza) so no thicket hides one
+      for (let d = 14; d < len - 3; d += 6 + e() * 4) {
+        const side = e() < 0.5 ? -1 : 1;
+        const off = side * (3.4 + e() * 1.4);
+        const cx = x1 + ((x2 - x1) * d) / len - ((z2 - z1) / len) * off;
+        const cz = z1 + ((z2 - z1) * d) / len + ((x2 - x1) / len) * off;
+        for (let k = 0, n = 2 + Math.floor(e() * 3); k < n; k++) {
+          const x = cx + (e() - 0.5) * 2.2;
+          const z = cz + (e() - 0.5) * 2.2;
+          if (meadow(x, z, 3)) addBush(x, z, e);
+        }
+      }
+    }
+    for (let guard = 0, rim = 0; rim < 30 && guard < 600; guard++) {
+      const t = e() * 4;
+      const along = (e() * 2 - 1) * (HALF - 4);
+      const inset = HALF - 2.6 - e() * 1.8;
+      const [x, z] = t < 1 ? [along, -inset] : t < 2 ? [along, inset] : t < 3 ? [-inset, along] : [inset, along];
+      if (!meadow(x, z, 3)) continue;
+      rim++;
+      addBush(x, z, e);
     }
 
     // Flowers grow in small patches: a stem and a bright low-poly head.
@@ -92,6 +130,8 @@ function useVegetation() {
     }
 
     return {
+      baseBushes,
+      totalBushes: bushes.length,
       // cards receive shadows, the solid cores cast them
       bushes: instanced(shrub.cards, shrub.cardMaterial, bushes, false),
       bushCores: instanced(shrub.core, shrub.coreMaterial, bushes),
@@ -248,7 +288,11 @@ export function Details() {
   const furniture = useFurniture();
   const critters = useCritters();
   const tier = useStore((st) => st.tier);
-  useEffect(() => setCardShare(veg.bushes.geometry, tier), [veg, tier]);
+  useEffect(() => {
+    setCardShare(veg.bushes.geometry, tier);
+    // Low keeps only the original scatter; the clustered extras come with Medium and High
+    veg.bushes.count = veg.bushCores.count = tier === 'low' ? veg.baseBushes : veg.totalBushes;
+  }, [veg, tier]);
   const tmp = useMemo(() => ({ m: new THREE.Matrix4(), q: new THREE.Quaternion(), e: new THREE.Euler(), p: new THREE.Vector3(), s: new THREE.Vector3() }), []);
 
   useFrame(({ clock }, rawDt) => {

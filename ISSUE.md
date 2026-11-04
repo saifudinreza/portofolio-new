@@ -82,6 +82,8 @@ Give Zare World a distinctive and consistent visual identity.
 **Category:** Environment Design  
 **Status:** PARTIAL
 
+> **Update M2b (#34):** semak berkelompok di tepi jalan dan tepi pulau, variasi warna musim gugur, 88 pohon; menunggu merge.
+>
 > **Update M2a (#33):** rumput diganti rumpun lebar (segitiga rumput -25%) dan tanah di bawahnya diwarnai zaitun; menunggu merge. Dekor, pohon, dan palet global menyusul di #34–#36.
 >
 > **Audit 2026-11-04.** Pulau dengan 5 zona, jalan, sungai, kolam, jembatan, pohon, rumput, NPC, dekor (`Environment`, `Zones`, `Decor`, `Details`, `Trees`, `Grass`, `River`, `Pond`). Kekurangan: 180 mesh kecil di Zones, tidak ada area tersembunyi/landmark besar di luar zona. **Saran:** Tambah 1-2 landmark dan area rahasia lewat komponen yang ada. Risiko: sedang (draw call). Sukses: landmark terlihat dari jalan dan FPS tidak turun.

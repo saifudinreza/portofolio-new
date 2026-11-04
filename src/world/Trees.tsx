@@ -81,7 +81,7 @@ function layout() {
   const r = rng(7);
   const out: Tree[] = [];
   let guard = 0;
-  while (out.length < 70 && guard++ < 3000) {
+  while (out.length < 88 && guard++ < 3000) {
     const x = (r() * 2 - 1) * (HALF - 3);
     const z = (r() * 2 - 1) * (HALF - 3);
     // extra room around the pond so canopies don't overhang the rim
@@ -152,7 +152,13 @@ export function Trees() {
         core.setMatrixAt(i, m);
         // per-tree lightness nudge so neighbours of the same kind don't look cloned
         const l = 0.9 + r() * 0.18;
-        canopy.setColorAt(i, color.setRGB(l, l, l));
+        // some oaks turn early: a hue multiplier on the green canopy (yellow-olive or orange), core included
+        const turn = kind.name === 'oak' ? r() : 1;
+        if (turn < 0.28) {
+          const [cr, cg, cb] = turn < 0.16 ? [1.9, 1.05, 0.35] : [3.2, 0.6, 0.25];
+          color.setRGB(l * cr, l * cg, l * cb, THREE.LinearSRGBColorSpace);
+        } else color.setRGB(l, l, l);
+        canopy.setColorAt(i, color);
         core.setColorAt(i, color);
         trunk.setColorAt(i, color.setRGB(l, l, l));
       });

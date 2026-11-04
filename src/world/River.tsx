@@ -14,7 +14,7 @@ const HALF = WORLD_SIZE / 2;
 const H = RIVER_HALF_WIDTH;
 const MAX_DROPS = 70;
 const FLOW_SPEED = 0.9; // m/s, visual only
-const REED_CLUSTERS: Record<Tier, number> = { low: 40, medium: 70, high: 90 };
+const REED_CLUSTERS: Record<Tier, number> = { low: 54, medium: 95, high: 122 };
 const SUN = new THREE.Vector3(12, 22, 8).normalize();
 
 /** The part of the river on the island, so meshes stop at the cliff edge where the waterfalls start. */
@@ -320,13 +320,13 @@ export function River() {
       return { x, z };
     };
     const pebbles: { x: number; z: number; s: number }[] = [];
-    for (let guard = 0; pebbles.length < 240 && guard < 2000; guard++) {
+    for (let guard = 0; pebbles.length < 320 && guard < 2600; guard++) {
       const { x, z } = place(H - 0.4 + r() * 1.2);
       if (nearCrossing(x, z) || Math.max(Math.abs(x), Math.abs(z)) > HALF - 1) continue;
       pebbles.push({ x, z, s: 0.06 + r() ** 2 * 0.16 });
     }
     const boulders: { x: number; z: number; s: number }[] = [];
-    for (let guard = 0; boulders.length < 16 && guard < 2000; guard++) {
+    for (let guard = 0; boulders.length < 22 && guard < 2600; guard++) {
       const { x, z } = place(H + 0.2 + r() * 1.1);
       const s = 0.35 + r() * 0.45;
       if (nearCrossing(x, z) || Math.max(Math.abs(x), Math.abs(z)) > HALF - 2 || boulders.some((b) => Math.hypot(b.x - x, b.z - z) < 3)) continue;

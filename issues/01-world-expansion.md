@@ -25,7 +25,7 @@ Make the playable island noticeably larger so the later features (waterfall area
 4. Cliffs, sea, fog and shadow camera: make sure the cliff ring in `Atmosphere.tsx` hugs the new edge, and that the sun's shadow frustum (look in `Environment.tsx` / the directional light) still covers the area around the car. The shadow only needs to cover near the car, not the whole island.
 5. Fill the new land so it is not empty: the existing scatter systems (trees, scenery, details, grass) should pick up the larger area automatically once they use `WORLD_SIZE`. Add a few **new roads** only if needed to reach the south-east and north-west corners (add to `roadSegments`; keep them short, dirt, no new areas yet).
 6. Reserve two empty, flat, tree-free pockets for later issues and mark them in `layout.ts` as exported constants (and in `keepClear` so scatter avoids them):
-   - `waterfallZone`: the **east edge**, around `x = 62..70`, `z = -10..10`. Issue 08 builds here.
+   - `waterfallZone`: the **east edge**, a box centred at `(62, -12)` with `hx = hz = 10` (`x = 52..72`, `z = -22..-2`). It is kept off the river's east reach (`z` about 9). Issue 08 builds here.
    - `riverBankZone`: nothing new, issue 03 reuses the existing river.
 7. Update the minimap and big map so the whole new island is visible and the player dot / pads still line up.
 

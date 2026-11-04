@@ -4,7 +4,7 @@ import { CuboidCollider, CylinderCollider, RigidBody } from '@react-three/rapier
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
-import { WORLD_SIZE, distanceToSegment, isClear, palette, pond, pondDistance, rng, roadSegments, trails } from './layout';
+import { OLD_WORLD_SIZE, WORLD_SIZE, scaled, distanceToSegment, isClear, palette, pond, pondDistance, rng, roadSegments, trails } from './layout';
 import { carState } from './carState';
 import { windUniforms } from './wind';
 import { trackLamp } from './dayCycle';
@@ -72,7 +72,7 @@ function useVegetation() {
       const s = 0.55 + rand() * 0.5;
       bushes.push({ m: mat(new THREE.Vector3(x, 0, z), rand() * 6.3, new THREE.Vector3(s, s * (0.8 + rand() * 0.3), s)), color: leafTint(rand) });
     };
-    for (let guard = 0; bushes.length < 70 && guard < 4000; guard++) {
+    for (let guard = 0; bushes.length < scaled(70) && guard < scaled(4000); guard++) {
       const x = (r() * 2 - 1) * HALF;
       const z = (r() * 2 - 1) * HALF;
       if (!meadow(x, z, 3)) continue;
@@ -98,7 +98,7 @@ function useVegetation() {
         }
       }
     }
-    for (let guard = 0, rim = 0; rim < 30 && guard < 600; guard++) {
+    for (let guard = 0, rim = 0; rim < Math.round(30 * (WORLD_SIZE / OLD_WORLD_SIZE)) && guard < 900; guard++) {
       const t = e() * 4;
       const along = (e() * 2 - 1) * (HALF - 4);
       const inset = HALF - 2.6 - e() * 1.8;
@@ -112,7 +112,7 @@ function useVegetation() {
     const stems: { m: THREE.Matrix4 }[] = [];
     const heads: { m: THREE.Matrix4; color: string }[] = [];
     const petals = [palette.coral, palette.yellow, palette.cream, '#B18CD9', '#F4A6B8'];
-    for (let patch = 0, guard = 0; patch < 34 && guard < 3000; guard++) {
+    for (let patch = 0, guard = 0; patch < scaled(34) && guard < scaled(3000); guard++) {
       const cx = (r() * 2 - 1) * HALF;
       const cz = (r() * 2 - 1) * HALF;
       if (!meadow(cx, cz, 2.6)) continue;

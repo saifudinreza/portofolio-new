@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import * as THREE from 'three';
-import { WORLD_SIZE, distanceToSegment, isClear, meadowField, rng, roadSegments } from './layout';
+import { WORLD_SIZE, scaled, distanceToSegment, isClear, meadowField, rng, roadSegments } from './layout';
 import { actors } from './actors';
 import { windUniforms } from './wind';
 import { useStore, type Tier } from '../store';
@@ -11,8 +11,9 @@ const MAX_STAMPS = 12;
 // One instance is a tuft of five wide blades (15 triangles) instead of one thin blade (7): far more ground covered
 // for fewer triangles. Each blade has just two segments; the vertex shader still bends the tip with the wind.
 const BLADES_PER_TUFT = 5;
-const TUFTS_FULL = 28000;
-const TUFTS_COARSE = 8500;
+// Tuned for the old 96 m island; the bigger one gets about 1.6x as many (not 2.25x) because every tuft is drawn every frame.
+const TUFTS_FULL = scaled(28000, 0.5);
+const TUFTS_COARSE = scaled(8500, 0.5);
 const GRASS_DENSITY: Record<Tier, number> = { low: 0.4, medium: 0.75, high: 1 };
 /** Low also trims the blades a little: fewer grass pixels to shade, which is what low-end GPUs struggle with. */
 const GRASS_HEIGHT: Record<Tier, number> = { low: 0.62, medium: 0.9, high: 1 };

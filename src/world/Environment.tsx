@@ -2,7 +2,7 @@ import { useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { CuboidCollider, RigidBody } from '@react-three/rapier';
 import * as THREE from 'three';
-import { RIVER_HALF_WIDTH, WORLD_SIZE, palette, riverDistance, roadSegments } from './layout';
+import { OLD_WORLD_SIZE, RIVER_HALF_WIDTH, WORLD_SIZE, palette, riverDistance, roadSegments } from './layout';
 import { carState } from './carState';
 import { daySample } from './dayCycle';
 import { Text } from '@react-three/drei';
@@ -11,6 +11,8 @@ import { useStore } from '../store';
 import { groundColorMap, groundNormalMap, meadowMask, roadMap } from './textures';
 
 const HALF = WORLD_SIZE / 2;
+/** The sand texture tiles every 4 m, as it did on the 96 m island (24 tiles). */
+const GROUND_REPEAT = Math.round((24 * WORLD_SIZE) / OLD_WORLD_SIZE);
 
 /** Soft sun that follows the car so shadows stay crisp without a huge shadow map. */
 export function Lights() {
@@ -97,8 +99,8 @@ export function Ground() {
         <meshStandardMaterial
           color={palette.ground}
           roughness={1}
-          map={groundColorMap(24)}
-          normalMap={groundNormalMap(24)}
+          map={groundColorMap(GROUND_REPEAT)}
+          normalMap={groundNormalMap(GROUND_REPEAT)}
           normalScale={new THREE.Vector2(0.35, 0.35)}
           onBeforeCompile={meadowShader}
         />

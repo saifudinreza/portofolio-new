@@ -5,7 +5,7 @@ import * as THREE from 'three';
 import { input, readDriveInput, useStore } from '../store';
 import { inRiver, nearestZone, pondDistance, zones, type ZoneId } from './layout';
 import { AIRTIME_GOAL, SPEED_GOAL, addHonk, addJump, tickPlayTime, unlock, visitZone } from '../game/achievements';
-import { impact, updateAmbience, updateCarAudio, updateListener, type SurfaceMaterial } from '../ui/sound';
+import { impact, updateAmbience, updateCarAudio, updateListener, whoosh, type SurfaceMaterial } from '../ui/sound';
 import { emitImpact } from './impactQueue';
 import { CarModel } from './CarModel';
 import { carState } from './carState';
@@ -23,6 +23,9 @@ const RIDE_HEIGHT = 0.4; // distance from body centre to the bottom of the wheel
 const ROLLING_RESISTANCE = 2; // constant deceleration when coasting, m/s²
 const PARK_SPEED = 0.3; // below this with no throttle the parking brake holds the car
 const JUMP_SPEED = 7.5; // upward speed of a jump; with gravity 25 that is about 1.1 m high
+const INTRO_SECONDS = 2; // how long the camera takes to drop from the island view to the car
+const INTRO_EXTRA_ZOOM = 0.4; // the intro starts 1.4x further out than the normal follow distance
+const easeInOutCubic = (t: number) => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
 const ZONE_VISIT_RADIUS = 6; // metres from an area's spawn point that count as having visited it
 const ZONE_IDS = Object.keys(zones) as ZoneId[];
 const CAR_GRASS_RADIUS = 1.8;
@@ -63,6 +66,8 @@ export function Car() {
   // Jump fires on the press, not while held. Starts true so the Space that closed the loader doesn't jump.
   const jumpHeld = useRef(true);
   const hornHeld = useRef(false);
+  // the camera's start-of-intro pose, filled in on the first driving frame
+  const introRef = useRef<{ done: boolean; from: THREE.Vector3 | null; look: THREE.Vector3 | null; t0: number }>({ done: false, from: null, look: null, t0: 0 });
   const airTime = useRef(0);
   const actor = useRef<Actor>({ x: 0, z: 0, radius: 0 });
   const { rapier, world } = useRapier();
@@ -314,12 +319,31 @@ export function Car() {
       }
       carState.orbit = orbit;
       const target = new THREE.Vector3(pos.x, 0, pos.z);
-      tmpOffset.copy(CAMERA_OFFSET).multiplyScalar(zoom * aspectZoom).applyAxisAngle(UP, orbit);
-      const desired = target.clone().add(tmpOffset);
-      const k = 1 - Math.exp(-(camera.position.distanceTo(desired) > 25 ? 2 : 4) * dt);
-      camera.position.lerp(desired, k);
-      lookAt.current.lerp(target, k);
-      camera.lookAt(lookAt.current);
+      const intro = introRef.current;
+      if (!intro.done) {
+        // Intro: ease the camera from the island orbit down to the car over INTRO_SECONDS, starting a bit
+        // zoomed out. Driving input is already live. Reduced motion skips straight to the follow position.
+        if (!intro.from) {
+          intro.from = camera.position.clone();
+          intro.look = lookAt.current.clone();
+          intro.t0 = clock.elapsedTime;
+          if (!still) whoosh();
+        }
+        const p = still ? 1 : Math.min(1, (clock.elapsedTime - intro.t0) / INTRO_SECONDS);
+        const e = easeInOutCubic(p);
+        tmpOffset.copy(CAMERA_OFFSET).multiplyScalar(zoom * aspectZoom * (1 + INTRO_EXTRA_ZOOM * (1 - e))).applyAxisAngle(UP, orbit);
+        camera.position.lerpVectors(intro.from, target.clone().add(tmpOffset), e);
+        lookAt.current.lerpVectors(intro.look!, target, e);
+        camera.lookAt(lookAt.current);
+        if (p >= 1) intro.done = true;
+      } else {
+        tmpOffset.copy(CAMERA_OFFSET).multiplyScalar(zoom * aspectZoom).applyAxisAngle(UP, orbit);
+        const desired = target.clone().add(tmpOffset);
+        const k = 1 - Math.exp(-(camera.position.distanceTo(desired) > 25 ? 2 : 4) * dt);
+        camera.position.lerp(desired, k);
+        lookAt.current.lerp(target, k);
+        camera.lookAt(lookAt.current);
+      }
     }
     // Short decaying jolt after a hard crash; the follow lerp above pulls the camera back next frame.
     if (shake.current > 0.01 && !still) {

@@ -386,6 +386,30 @@ function createAmbience(c: AudioContext, dest: AudioNode) {
   };
 }
 
+/** A short airy sweep for the intro camera. The context may still be resuming right after "Start driving", so it waits for it. */
+export function whoosh() {
+  if (!ctx || !master) return;
+  const c = ctx;
+  const out = master;
+  const play = () => {
+    const now = c.currentTime;
+    const src = c.createBufferSource();
+    src.buffer = noiseBuffer(c, 0.8, (t) => Math.sin(Math.PI * t)); // swells in and fades out
+    const filter = c.createBiquadFilter();
+    filter.type = 'bandpass';
+    filter.Q.value = 0.9;
+    filter.frequency.setValueAtTime(300, now);
+    filter.frequency.exponentialRampToValueAtTime(1500, now + 0.8);
+    const gain = c.createGain();
+    gain.gain.value = 0.1;
+    src.connect(filter).connect(gain).connect(out);
+    src.start(now);
+    src.stop(now + 0.85);
+  };
+  if (c.state === 'running') play();
+  else void c.resume().then(play).catch(() => {});
+}
+
 /** Called by the car every frame with its position. Does nothing until audio has been unlocked. */
 export function updateAmbience(x: number, z: number) {
   if (!ctx || ctx.state !== 'running' || !ambience) return;

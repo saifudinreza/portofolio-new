@@ -1,7 +1,16 @@
 // World layout: every zone position in one place (x, z on the ground plane).
 // The camera looks from the south-east, so "north" (negative z) is up-screen.
 
-export const WORLD_SIZE = 96; // square island, metres
+export const WORLD_SIZE = 144; // square island, metres
+/** The island was 96 m before it was enlarged: every area, road and the circuit still sit inside that centred square. */
+export const OLD_WORLD_SIZE = 96;
+/** How many times bigger the island's area is than it was. */
+export const AREA_RATIO = (WORLD_SIZE / OLD_WORLD_SIZE) ** 2;
+/**
+ * Scale a scatter count (trees, rocks, leaves ...) that was tuned for the old island. `share` 1 keeps the density
+ * the same everywhere; a smaller share adds fewer objects than the extra land would need (use it for heavy things).
+ */
+export const scaled = (n: number, share = 1) => Math.round(n * (1 + (AREA_RATIO - 1) * share));
 
 export type ZoneId = 'home' | 'projects' | 'skills' | 'about' | 'contact';
 
@@ -36,6 +45,11 @@ export const projectPadPositions: [number, number][] = [
 export const warehouse = { x: -24, z: -20 };
 export const aboutArea = { x: -22, z: 26 };
 export const contactPads: [number, number][] = [[18, 30], [26, 30], [34, 30]];
+/**
+ * Empty, flat, tree-free pocket on the east side, reserved for the edge waterfall (issue #56). It sits well clear of the
+ * river's east reach (z about 9) and of the Projects field. A box: x from `x - hx` to `x + hx`, z from `z - hz` to `z + hz`.
+ */
+export const waterfallZone = { x: 62, z: -12, hx: 10, hz: 10 };
 /** Koi pond between the About and Contact roads; an ellipse with radii rx (x) and rz (z). */
 export const pond = { x: -1.5, z: 27, rx: 5.5, rz: 3.8, water: 0.22 };
 
@@ -82,6 +96,10 @@ export const roadSegments: [number, number, number, number][] = [
   [0, 4, 10, 30], // to contact
   [10, 30, 36, 30], // along the contact pads
   [26, -6, 26, -32], // projects spine
+  // roads out into the land added when the island grew; kept at the end so the indices above stay valid
+  [36, 30, 58, 48], // south-east from the contact pads
+  [26, -32, 44, -56], // north-east, past the end of the projects spine
+  [-24, -10, -52, -6], // west of the skills warehouse
 ];
 
 /** A point `t` (0..1) of the way along road `i`, plus the road's heading there: [x, z, yaw]. */
@@ -122,6 +140,7 @@ const keepClear: [number, number, number][] = [
   [26, 29, 13], // contact
   [-8, 10, 5], // ramp
   [9, 16, 5], // cones
+  [waterfallZone.x, waterfallZone.z, 13], // reserved for the edge waterfall
 ];
 
 // ---------- river and bridge ----------
@@ -132,7 +151,7 @@ const keepClear: [number, number, number][] = [
  * Control points run past the island edge so the smoothed curve leaves it cleanly.
  */
 const riverControl: [number, number][] = [
-  [5, -54], [5.5, -40], [6.5, -28], [7.5, -18], [10, -8], [13, -1], [16.5, 5], [23, 8.8], [32, 9.4], [41, 8.6], [54, 9.6],
+  [4.2, -90], [4.6, -72], [5, -54], [5.5, -40], [6.5, -28], [7.5, -18], [10, -8], [13, -1], [16.5, 5], [23, 8.8], [32, 9.4], [41, 8.6], [54, 9.6], [68, 9.2], [86, 9.8],
 ];
 /** Half the width of the water; the sandy bank reaches about 1.6 m further. */
 export const RIVER_HALF_WIDTH = 2.6;

@@ -3,7 +3,7 @@ import { CuboidCollider, CylinderCollider, RigidBody } from '@react-three/rapier
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
-import { WORLD_SIZE, distanceToSegment, isClear, pondDistance, rng, trails } from './layout';
+import { WORLD_SIZE, scaled, distanceToSegment, isClear, pondDistance, rng, trails } from './layout';
 import { trackLamp } from './dayCycle';
 import { fallenLeafMap } from './decorTextures';
 import { woodMap } from './textures';
@@ -20,8 +20,8 @@ const up = new THREE.Vector3(0, 1, 0);
 const open = (x: number, z: number, margin = 3.2) =>
   Math.abs(x) < HALF - 3 && Math.abs(z) < HALF - 3 && isClear(x, z, margin) && pondDistance(x, z) > 1.8 && trails.every((t) => distanceToSegment(x, z, t) > 1.8);
 
-/** Lighthouse position; chosen so it is clear of the river, roads and every zone. */
-const LIGHTHOUSE = { x: -41, z: 38 };
+/** Lighthouse position, out on the south-west coast of the enlarged island; clear of the river, roads and every zone. */
+const LIGHTHOUSE = { x: -62, z: 56 };
 
 const mat = (x: number, y: number, z: number, yaw: number, s: number | THREE.Vector3 = 1) =>
   new THREE.Matrix4().compose(new THREE.Vector3(x, y, z), new THREE.Quaternion().setFromAxisAngle(up, yaw), typeof s === 'number' ? new THREE.Vector3(s, s, s) : s);
@@ -60,7 +60,7 @@ function useScenery() {
     // Stumps, some with a log or two lying next to them.
     const stumps: THREE.Matrix4[] = [];
     const logs: THREE.Matrix4[] = [];
-    for (let guard = 0, n = 0; n < 16 && guard < 3000; guard++) {
+    for (let guard = 0, n = 0; n < scaled(16) && guard < scaled(3000); guard++) {
       const x = (r() * 2 - 1) * (HALF - 4);
       const z = (r() * 2 - 1) * (HALF - 4);
       if (!open(x, z)) continue;
@@ -76,7 +76,7 @@ function useScenery() {
 
     // Crate stacks: two or three boxes, solid.
     const crates: { m: THREE.Matrix4; x: number; y: number; z: number; yaw: number; s: number }[] = [];
-    for (let guard = 0, n = 0; n < 12 && guard < 3000; guard++) {
+    for (let guard = 0, n = 0; n < scaled(12) && guard < scaled(3000); guard++) {
       const cx = (r() * 2 - 1) * (HALF - 5);
       const cz = (r() * 2 - 1) * (HALF - 5);
       if (!open(cx, cz, 3.4)) continue;
@@ -97,7 +97,7 @@ function useScenery() {
     const leaves: THREE.Matrix4[] = [];
     const leafColors: THREE.Color[] = [];
     const palette4 = ['#E9A93A', '#D9722F', '#F5B83D', '#B8743C'];
-    for (let guard = 0; leaves.length < 260 && guard < 6000; guard++) {
+    for (let guard = 0; leaves.length < scaled(260) && guard < scaled(6000); guard++) {
       const x = (r() * 2 - 1) * (HALF - 3);
       const z = (r() * 2 - 1) * (HALF - 3);
       if (!open(x, z, 2.6)) continue;

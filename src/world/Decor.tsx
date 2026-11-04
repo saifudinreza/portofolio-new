@@ -5,7 +5,7 @@ import { BallCollider, CuboidCollider, CylinderCollider, RigidBody, type RapierR
 import * as THREE from 'three';
 import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
-import { RIVER_BANK, RIVER_HALF_WIDTH, WORLD_SIZE, aboutArea, contactPads, distanceToSegment, isClear, palette, pondDistance, projectPadPositions, riverDistance, rng, roadSegments, trails, warehouse, zones } from './layout';
+import { RIVER_BANK, RIVER_HALF_WIDTH, WORLD_SIZE, aboutArea, contactPads, distanceToSegment, isClear, palette, pondDistance, projectPadPositions, riverDistance, rng, roadSegments, scaled, trails, warehouse, zones } from './layout';
 import { projects } from '../data/profile';
 import { carState } from './carState';
 import { trackLamp } from './dayCycle';
@@ -117,7 +117,7 @@ function useGroundDetail() {
 
     // Fallen leaves on the roads and paving.
     const leaves: { x: number; z: number }[] = [];
-    for (let guard = 0; leaves.length < 320 && guard < 20000; guard++) {
+    for (let guard = 0; leaves.length < scaled(320) && guard < scaled(20000); guard++) {
       const x = (r() * 2 - 1) * (HALF - 2);
       const z = (r() * 2 - 1) * (HALF - 2);
       if (riverDistance(x, z) < RIVER_HALF_WIDTH + 0.6) continue;
@@ -137,7 +137,7 @@ function useGroundDetail() {
 
     // Rocks in small clusters out in the meadows; the big ones are solid.
     const rocks: { x: number; z: number; s: number; yaw: number }[] = [];
-    for (let guard = 0; rocks.length < 70 && guard < 4000; guard++) {
+    for (let guard = 0; rocks.length < scaled(70) && guard < scaled(4000); guard++) {
       const cx = (r() * 2 - 1) * (HALF - 4);
       const cz = (r() * 2 - 1) * (HALF - 4);
       if (!meadow(cx, cz, 3.2)) continue;
@@ -159,7 +159,7 @@ function useGroundDetail() {
 
     // Mushrooms in little rings: a pale stem and a rounded cap.
     const shrooms: { x: number; z: number; s: number; cap: string }[] = [];
-    for (let patch = 0, guard = 0; patch < 26 && guard < 3000; guard++) {
+    for (let patch = 0, guard = 0; patch < scaled(26) && guard < scaled(3000); guard++) {
       const cx = (r() * 2 - 1) * (HALF - 3);
       const cz = (r() * 2 - 1) * (HALF - 3);
       if (!meadow(cx, cz, 3)) continue;

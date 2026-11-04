@@ -10,7 +10,7 @@ At the east edge of the (now bigger) island, a tall, beautiful waterfall pours f
 
 ## Current state (read these)
 
-- Issue 01 reserved `waterfallZone` (east edge, about `x = 62..70`, `z = -10..10`) in `layout.ts`.
+- Issue 01 reserved `waterfallZone` in `layout.ts`: a box centred at `(62, -12)`, `hx = hz = 10`, so `x = 52..72` and `z = -22..-2` on the east edge (island edge is `x = 72`). It is 11 m or more from the river's east reach (which runs at `z` about 9), and it is already in `keepClear`, so scatter avoids it.
 - `src/world/River.tsx`: already has a waterfall "curtain" component for the river mouths (`// ---------- waterfalls ----------`, bows outward as it falls) plus splash drops. **Reuse and generalise it** instead of writing a second waterfall shader.
 - `src/world/Atmosphere.tsx`: cliffs and sea around the island.
 - `src/world/Npc.tsx` (514 lines), `people.ts`, `actors.ts`: NPC model, walk/sit animation, routes from `layout.ts` (`npcRoutes`, `NpcRoute` with `sit`, `idle`, `look`).

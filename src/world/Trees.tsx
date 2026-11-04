@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef } from 'react';
 import { useFrame } from '@react-three/fiber';
 import { CylinderCollider, RigidBody } from '@react-three/rapier';
 import * as THREE from 'three';
-import { WORLD_SIZE, distanceToSegment, isClear, pondDistance, rng, trails } from './layout';
+import { WORLD_SIZE, scaled, distanceToSegment, isClear, pondDistance, rng, trails } from './layout';
 import { actors, type Actor } from './actors';
 import { carState } from './carState';
 import { windUniforms } from './wind';
@@ -81,7 +81,7 @@ function layout() {
   const r = rng(7);
   const out: Tree[] = [];
   let guard = 0;
-  while (out.length < 88 && guard++ < 3000) {
+  while (out.length < scaled(88, 0.65) && guard++ < scaled(3000)) {
     const x = (r() * 2 - 1) * (HALF - 3);
     const z = (r() * 2 - 1) * (HALF - 3);
     // extra room around the pond so canopies don't overhang the rim

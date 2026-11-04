@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { projects } from '../data/profile';
+import type { CarSkin } from '../world/layout';
 
 // Achievements live in their own small store (not the main one) so the game code can report events from
 // anywhere without an import cycle. Everything is saved in localStorage; storage can be blocked, so it never throws.
@@ -35,6 +36,14 @@ export const ACHIEVEMENTS: Achievement[] = [
   { id: 'abyss', title: 'Edge of the world', description: 'Fall off the island.', secret: true },
   { id: 'classic', title: 'Recruiter mode', description: 'Open the classic view.' },
 ];
+
+/** Jeep paint jobs and what unlocks them. Blue is always there; the others are rewards. */
+export const SKIN_RULES: Record<CarSkin, { label: string; hint: string; unlocked: (u: Record<string, true>) => boolean }> = {
+  navy: { label: 'Blue', hint: 'Always available', unlocked: () => true },
+  coral: { label: 'Coral', hint: 'Unlock "Window shopper"', unlocked: (u) => !!u['all-projects'] },
+  sand: { label: 'Sand', hint: 'Unlock "Grand tour"', unlocked: (u) => !!u['all-zones'] },
+  teal: { label: 'Teal', hint: 'Unlock any 6 achievements', unlocked: (u) => Object.keys(u).length >= 6 },
+};
 
 const KEY = 'zare-world-achievements';
 

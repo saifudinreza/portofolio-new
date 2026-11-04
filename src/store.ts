@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { ZoneId } from './world/layout';
+import { CAR_SKINS, type CarSkin, type ZoneId } from './world/layout';
 import { unlock, visitProject } from './game/achievements';
 
 /** Something the car is currently parked on: a project pad, the warehouse, etc. */
@@ -59,6 +59,18 @@ function loadQuality(): Quality {
 
 const initialQuality = loadQuality();
 
+const SKIN_KEY = 'zare-world-skin';
+
+function loadSkin(): CarSkin {
+  try {
+    const saved = localStorage.getItem(SKIN_KEY);
+    if (saved && saved in CAR_SKINS) return saved as CarSkin;
+  } catch {
+    // fall through to the default
+  }
+  return 'navy';
+}
+
 type State = {
   started: boolean;
   quality: Quality;
@@ -72,6 +84,9 @@ type State = {
   setLoad: (progress: number, done: boolean) => void;
   muted: boolean;
   volume: number;
+  /** jeep paint; the menu only offers the ones that are unlocked */
+  carSkin: CarSkin;
+  setCarSkin: (skin: CarSkin) => void;
   classicOpen: boolean;
   /** the Menu panel (☰) and which tab it shows, or null when closed */
   menuOpen: MenuTab | null;
@@ -113,6 +128,15 @@ export const useStore = create<State>((set, get) => ({
   loadDone: false,
   setLoad: (loadProgress, loadDone) => set({ loadProgress, loadDone }),
   ...loadAudioPrefs(),
+  carSkin: loadSkin(),
+  setCarSkin: (carSkin) => {
+    set({ carSkin });
+    try {
+      localStorage.setItem(SKIN_KEY, carSkin);
+    } catch {
+      // not remembered, that's fine
+    }
+  },
   classicOpen: false,
   menuOpen: null,
   mapOpen: false,

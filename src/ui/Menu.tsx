@@ -1,7 +1,8 @@
 import type { ReactNode } from 'react';
 import { input, useStore, type MenuTab } from '../store';
 import { profile } from '../data/profile';
-import { ACHIEVEMENTS, resetAchievements, useAchievements, type AchievementId } from '../game/achievements';
+import { ACHIEVEMENTS, SKIN_RULES, resetAchievements, useAchievements, type AchievementId } from '../game/achievements';
+import { CAR_SKINS, type CarSkin } from '../world/layout';
 import { QualitySelect, SoundControl } from './Hud';
 import { useDialogFocus } from './useDialog';
 
@@ -119,6 +120,8 @@ const formatTime = (total: number) => {
 
 function AchievementsPanel() {
   const a = useAchievements();
+  const skin = useStore((s) => s.carSkin);
+  const setSkin = useStore((s) => s.setCarSkin);
   const progress: Partial<Record<AchievementId, number>> = { 'all-projects': a.projects, 'all-zones': a.zones, jumper: a.jumps, honk: a.honks };
   const done = ACHIEVEMENTS.filter((x) => a.unlocked[x.id]).length;
   return (
@@ -144,10 +147,35 @@ function AchievementsPanel() {
           );
         })}
       </ul>
+      <h3>Jeep paint</h3>
+      <div className="skins" role="radiogroup" aria-label="Jeep paint">
+        {(Object.keys(SKIN_RULES) as CarSkin[]).map((id) => {
+          const rule = SKIN_RULES[id];
+          const open = rule.unlocked(a.unlocked);
+          return (
+            <button
+              key={id}
+              role="radio"
+              aria-checked={skin === id}
+              disabled={!open}
+              className={`skin${skin === id ? ' on' : ''}`}
+              title={open ? rule.label : rule.hint}
+              onClick={() => setSkin(id)}
+            >
+              <span className="skin-swatch" style={{ background: CAR_SKINS[id].paint }} aria-hidden />
+              <b>{rule.label}</b>
+              <small>{open ? 'Unlocked' : rule.hint}</small>
+            </button>
+          );
+        })}
+      </div>
       <button
         className="btn small"
         onClick={() => {
-          if (window.confirm('Reset all achievements and play time?')) resetAchievements();
+          if (window.confirm('Reset all achievements and play time?')) {
+            resetAchievements();
+            setSkin('navy'); // the rewards are gone, so is the paint they unlocked
+          }
         }}
       >
         Reset progress

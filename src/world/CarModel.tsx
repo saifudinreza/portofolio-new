@@ -1,4 +1,5 @@
-import { useLayoutEffect, useMemo, useRef, type MutableRefObject } from 'react';
+import { useEffect, useLayoutEffect, useMemo, useRef, type MutableRefObject } from 'react';
+import { useStore } from '../store';
 import { useFrame } from '@react-three/fiber';
 import { RoundedBox, Text } from '@react-three/drei';
 import * as THREE from 'three';
@@ -216,6 +217,11 @@ const SCREEN_TOP: [number, number] = [0.66, 0.26]; // y, z of the windscreen's t
 /** The jeep's looks: body, open cabin with roll cage, lights, off-road wheels and visual suspension. Physics lives in Car. */
 export function CarModel({ chassis, wheels, frontPivots }: Refs) {
   const mats = useCarMaterials();
+  // Repaint the shared body material in place; building a new material would drop it from the merged static parts.
+  const skin = useStore((s) => s.carSkin);
+  useEffect(() => {
+    mats.paint.color.set(CAR_SKINS[skin].paint);
+  }, [mats, skin]);
   const tyre = useMemo(() => tyreGeometry(), []);
   const rim = useMemo(() => rimGeometry(), []);
   const fender = useMemo(() => fenderGeometry(), []);

@@ -7,6 +7,7 @@ import { palette, pond, pondDistance, rng } from './layout';
 import { actors, type Actor } from './actors';
 import { splash } from '../ui/sound';
 import { mossyStoneMaterial, rockGeometry } from './stone';
+import { FOUNTAIN_KEEP, Fountain } from './Fountain';
 
 const MAX_RIPPLES = 12;
 const FISH_COUNT = 9;
@@ -240,7 +241,7 @@ export function Pond() {
     const pads: { x: number; z: number; s: number; yaw: number; phase: number }[] = [];
     for (let guard = 0; pads.length < LILY_COUNT && guard < 500; guard++) {
       const a = r() * Math.PI * 2;
-      const [x, z] = onEllipse(a, 0.35 + r() * 0.45);
+      const [x, z] = onEllipse(a, FOUNTAIN_KEEP + 0.15 + r() * 0.35); // clear of the fountain in the middle
       const s = 0.25 + r() * 0.2;
       if (pads.some((p) => Math.hypot(p.x - x, p.z - z) < p.s + s + 0.3)) continue;
       pads.push({ x, z, s, yaw: r() * Math.PI * 2, phase: r() * 10 });
@@ -277,7 +278,7 @@ export function Pond() {
 
     // Koi.
     const fish: Fish[] = Array.from({ length: FISH_COUNT }, () => {
-      const [x, z] = onEllipse(r() * Math.PI * 2, r() * 0.55);
+      const [x, z] = onEllipse(r() * Math.PI * 2, FOUNTAIN_KEEP + 0.1 + r() * 0.35);
       return { x, z, y: 0.1, heading: r() * Math.PI * 2, speed: 0.4, cruise: 0.3 + r() * 0.2, wander: 0, scare: 0, phase: r() * 10, scale: 0.8 + r() * 0.4, depth: 0.07 + r() * 0.06, rise: 0, nextRise: 3 + r() * 10 };
     });
     const fishGeometry = koiGeometry();
@@ -401,6 +402,15 @@ export function Pond() {
         sx += (cx / cl) * (ahead - 0.6) * 8;
         sz += (cz / cl) * (ahead - 0.6) * 8;
       }
+      // steer round the fountain in the middle
+      const nearC = pondDistance(f.x + dirX * 0.9, f.z + dirZ * 0.9);
+      if (nearC < FOUNTAIN_KEEP + 0.15) {
+        const ox = f.x - pond.x;
+        const oz = f.z - pond.z;
+        const ol = Math.hypot(ox, oz) || 1;
+        sx += (ox / ol) * (FOUNTAIN_KEEP + 0.15 - nearC) * 8;
+        sz += (oz / ol) * (FOUNTAIN_KEEP + 0.15 - nearC) * 8;
+      }
       for (const o of fish) {
         if (o === f) continue;
         const dx = f.x - o.x;
@@ -440,6 +450,13 @@ export function Pond() {
         f.x = pond.x + (f.x - pond.x) * (0.82 / d);
         f.z = pond.z + (f.z - pond.z) * (0.82 / d);
         f.heading = Math.atan2(pond.x - f.x, pond.z - f.z);
+      }
+      if (d < FOUNTAIN_KEEP) {
+        // never inside the fountain's stone: push back out and turn away from it
+        const k = FOUNTAIN_KEEP / Math.max(d, 1e-3);
+        f.x = pond.x + (f.x - pond.x) * k;
+        f.z = pond.z + (f.z - pond.z) * k;
+        f.heading = Math.atan2(f.x - pond.x, f.z - pond.z);
       }
       f.scare = Math.max(0, f.scare - dt * 0.5);
 
@@ -535,6 +552,7 @@ export function Pond() {
       <primitive object={scene.headMesh} />
       <primitive object={scene.fishMesh} />
       <primitive object={scene.dropMesh} />
+      <Fountain onRipple={addRipple} />
     </group>
   );
 }

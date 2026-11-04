@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react';
 import { useStore } from '../store';
 import { carState } from '../world/carState';
 import { actors } from '../world/actors';
-import { RIVER_HALF_WIDTH, WORLD_SIZE, aboutArea, experienceArea, bridge, contactPads, palette, pond, projectPadPositions, riverPath, roadSegments, trails, warehouse } from '../world/layout';
+import { RIVER_HALF_WIDTH, WORLD_SIZE, aboutArea, experienceArea, waterfall, bridge, contactPads, palette, pond, projectPadPositions, riverPath, roadSegments, trails, warehouse } from '../world/layout';
 
 const HALF = WORLD_SIZE / 2;
 const MAX_KMH = 70; // a little over boost top speed (19 m/s ≈ 68 km/h)
@@ -73,6 +73,7 @@ export function drawStaticMap(size: number, dpr: number) {
   g.fillRect(px(warehouse.x) - 5 * k, px(warehouse.z) - 5 * k, 10 * k, 8 * k);
   dot(aboutArea.x, aboutArea.z, 4 * k, palette.yellow);
   dot(experienceArea.x, experienceArea.z, 4 * k, palette.coral);
+  dot(waterfall.x, waterfall.z, 3.5 * k, '#6CC7BA');
   dot(0, -3, 3 * k, palette.navy);
 
   g.font = `700 ${9 * k}px "DM Sans", system-ui, sans-serif`;
@@ -87,6 +88,7 @@ export function drawStaticMap(size: number, dpr: number) {
   label('SKILLS', warehouse.x, warehouse.z - 8);
   label('ABOUT', aboutArea.x, aboutArea.z + 9);
   label('WORK', experienceArea.x, experienceArea.z + 9);
+  label('FALLS', waterfall.x, waterfall.z + 9);
   label('CONTACT', 26, 38);
   label('HOME', 0, 3.5);
   return c;

@@ -23,6 +23,7 @@ import { Grass } from './Grass';
 import { Pond } from './Pond';
 import { River } from './River';
 import { RiverProps } from './RiverProps';
+import { Waterfall } from './Waterfall';
 import { Bridge } from './Bridge';
 import { Npcs } from './Npc';
 import { ImpactParticles } from './Impacts';
@@ -111,6 +112,7 @@ export function Experience({ debug = false }: { debug?: boolean }) {
             <RiverProps />
             <Bridge />
           </P>
+          <P n="Waterfall"><Waterfall /></P>
           <P n="People"><Npcs /></P>
           <P n="Zones">
             <ImpactParticles />

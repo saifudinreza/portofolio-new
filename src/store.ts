@@ -246,11 +246,11 @@ export const useStore = create<State>((set, get) => ({
  * Driving input. Kept outside React state on purpose: it is read every frame
  * by the car and written by keyboard + touch handlers, so it must not re-render.
  */
-export type TouchButton = 'left' | 'right' | 'gas' | 'reverse' | 'horn' | 'boost' | 'jump';
+export type TouchButton = 'left' | 'right' | 'gas' | 'reverse' | 'horn' | 'boost' | 'jump' | 'brake';
 
 export const input = {
   // Each pedal keeps its own state so releasing one never cancels another that is still held.
-  touch: { left: false, right: false, gas: false, reverse: false, horn: false, boost: false, jump: false } as Record<TouchButton, boolean>,
+  touch: { left: false, right: false, gas: false, reverse: false, horn: false, boost: false, jump: false, brake: false } as Record<TouchButton, boolean>,
   /** Virtual joystick, −1..1 each way: x right, y forward. Zero when released. */
   joy: { x: 0, y: 0 },
   keys: new Set<string>(),
@@ -263,6 +263,14 @@ export const input = {
 // ---------- gamepad ----------
 
 const PAD_DEAD = 0.15;
+/** Analog triggers rarely rest at exactly 0; anything below this counts as released. */
+const PAD_TRIGGER_DEAD = 0.1;
+/**
+ * After all sources are added, a leftover this small is noise, not a request. Without it a trigger resting at 0.04
+ * kept the throttle off zero: the parking brake never engaged and the car crept away and sped up on its own.
+ */
+const THROTTLE_DEAD = 0.1;
+const STEER_DEAD = 0.05;
 type PadInput = { throttle: number; steer: number; jump: boolean; brake: boolean; boost: boolean; horn: boolean };
 const NO_PAD: PadInput = { throttle: 0, steer: 0, jump: false, brake: false, boost: false, horn: false };
 // Y and Back act once per press, so remember last frame's state.
@@ -287,6 +295,10 @@ function readGamepad(): PadInput {
   }
   const pressed = (i: number) => pad.buttons[i]?.pressed ?? false;
   const value = (i: number) => pad.buttons[i]?.value ?? 0;
+  const trigger = (i: number) => {
+    const v = value(i);
+    return v < PAD_TRIGGER_DEAD ? 0 : (v - PAD_TRIGGER_DEAD) / (1 - PAD_TRIGGER_DEAD);
+  };
   const ax = pad.axes[0] ?? 0;
   const stick = Math.abs(ax) < PAD_DEAD ? 0 : (ax - Math.sign(ax) * PAD_DEAD) / (1 - PAD_DEAD);
   const y = pressed(3);
@@ -296,7 +308,7 @@ function readGamepad(): PadInput {
   padPrev.y = y;
   padPrev.back = back;
   return {
-    throttle: value(7) - value(6),
+    throttle: trigger(7) - trigger(6),
     // steer is +1 for left, the stick is +1 for right
     steer: -stick,
     jump: pressed(0),
@@ -324,10 +336,14 @@ export function readDriveInput() {
   if (k.has('KeyS') || k.has('ArrowDown')) throttle -= 1;
   if (k.has('KeyA') || k.has('ArrowLeft')) steer += 1;
   if (k.has('KeyD') || k.has('ArrowRight')) steer -= 1;
+  throttle = Math.max(-1, Math.min(1, throttle));
+  steer = Math.max(-1, Math.min(1, steer));
+  if (Math.abs(throttle) < THROTTLE_DEAD) throttle = 0;
+  if (Math.abs(steer) < STEER_DEAD) steer = 0;
   return {
-    throttle: Math.max(-1, Math.min(1, throttle)),
-    steer: Math.max(-1, Math.min(1, steer)),
-    brake: k.has('KeyB') || k.has('ControlLeft') || p.brake,
+    throttle,
+    steer,
+    brake: k.has('KeyB') || k.has('ControlLeft') || t.brake || p.brake,
     // held, not tapped: the car decides on the press edge so holding Space never bunny-hops
     jump: k.has('Space') || t.jump || p.jump,
     boost: k.has('ShiftLeft') || k.has('ShiftRight') || t.boost || p.boost,

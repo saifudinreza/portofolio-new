@@ -13,6 +13,8 @@ export const carState = {
   brake: false,
   boost: false,
   grounded: false,
+  /** true while the handbrake drift is in effect (brake + steering at speed) */
+  drifting: false,
   parked: false,
   mass: 0,
   fps: 0,

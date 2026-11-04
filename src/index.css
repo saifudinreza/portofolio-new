@@ -195,6 +195,9 @@ kbd {
 .pad-group { display: flex; gap: 12px; pointer-events: auto; align-items: flex-end; }
 .pad-group.right { flex-direction: column; align-items: flex-end; }
 .pad-extras, .pedals { display: flex; gap: 12px; }
+/* four round buttons are too wide for a phone held upright: two rows of two */
+.pad-extras { flex-wrap: wrap; justify-content: flex-end; }
+@media (max-width: 520px) { .pad-extras { max-width: 132px; } }
 .touch button {
   width: 72px; height: 72px; font-size: 1.4rem; color: var(--navy); background: var(--cream);
   border: var(--border); border-radius: 18px; box-shadow: var(--shadow); touch-action: none; user-select: none; -webkit-user-select: none;
@@ -203,6 +206,7 @@ kbd {
 .touch button:active { transform: translate(3px, 3px); box-shadow: 1px 1px 0 var(--navy); }
 .touch .gas { background: var(--teal-ink); color: #fff; }
 .touch .round { width: 60px; height: 60px; border-radius: 50%; }
+.touch .round.drift { font-size: 0.7rem; font-weight: 800; letter-spacing: 0.02em; }
 .touch .horn { background: var(--yellow); }
 .touch .jump { background: var(--teal); color: #fff; }
 .touch .boost { background: var(--coral); color: #fff; }

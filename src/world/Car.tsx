@@ -4,7 +4,7 @@ import { CoefficientCombineRule, RigidBody, RoundCuboidCollider, useBeforePhysic
 import * as THREE from 'three';
 import { input, readDriveInput, useStore } from '../store';
 import { inRiver, nearestZone, pondDistance, zones, type ZoneId } from './layout';
-import { AIRTIME_GOAL, SPEED_GOAL, addHonk, addJump, tickPlayTime, unlock, visitZone } from '../game/achievements';
+import { AIRTIME_GOAL, DRIFT_GOAL, SPEED_GOAL, addHonk, addJump, tickPlayTime, unlock, visitZone } from '../game/achievements';
 import { cancelLap } from '../game/circuit';
 import { openPrimaryLink } from '../ui/primaryLink';
 import { impact, updateAmbience, updateCarAudio, updateListener, whoosh, type SurfaceMaterial } from '../ui/sound';
@@ -21,6 +21,17 @@ const REVERSE_SPEED = 6;
 const ACCEL = 24;
 const TURN_RATE = 2.5;
 const GRIP = 10;
+// Drift: hold the brake (B / Ctrl / gamepad B / touch Drift) while steering above DRIFT_MIN_SPEED. Sideways grip drops,
+// the car turns harder and slides, but the slide is capped so it never spins out. Letting go brings the grip back in ~0.5 s.
+const DRIFT_MIN_SPEED = 6;
+const DRIFT_GRIP = 1.8;
+const DRIFT_TURN_BOOST = 0.15; // extra turn rate at full drift
+const DRIFT_LIGHT_DRAG = 0.8; // the handbrake drag while drifting (a plain brake uses 6)
+const SLIP_LIMIT_RATIO = 0.55; // sideways speed never exceeds this share of the forward speed (about 33 degrees)
+const STEER_FALLOFF = 0.35; // share of the steering lost at the top speed
+const BASE_FOV = 38;
+const FOV_EXTRA = 4; // the view widens by this much at full boost speed
+const CAMERA_MIN_DIST = 6; // the camera is never pulled closer to the car than this by a wall
 const RIDE_HEIGHT = 0.4; // distance from body centre to the bottom of the wheels
 const ROLLING_RESISTANCE = 2; // constant deceleration when coasting, m/s²
 const PARK_SPEED = 0.3; // below this with no throttle the parking brake holds the car
@@ -50,6 +61,7 @@ let orbit = 0;
 let lastDragAt = 0;
 let dragging = false;
 const tmpOffset = new THREE.Vector3();
+const tmpCam = new THREE.Vector3();
 
 const tmpQuat = new THREE.Quaternion();
 const tmpForward = new THREE.Vector3();
@@ -71,6 +83,8 @@ export function Car() {
   // the camera's start-of-intro pose, filled in on the first driving frame
   const introRef = useRef<{ done: boolean; from: THREE.Vector3 | null; look: THREE.Vector3 | null; t0: number }>({ done: false, from: null, look: null, t0: 0 });
   const airTime = useRef(0);
+  const drift = useRef(0); // 0..1, how far into a drift the car is
+  const driftTime = useRef(0);
   const actor = useRef<Actor>({ x: 0, z: 0, radius: 0 });
   const { rapier, world } = useRapier();
   const camera = useThree((s) => s.camera);
@@ -253,6 +267,8 @@ export function Car() {
       airTime.current = grounded ? 0 : airTime.current + dt;
       if (airTime.current > AIRTIME_GOAL) unlock('airtime');
       if (fwdSpeed > SPEED_GOAL) unlock('speed');
+      driftTime.current = carState.drifting ? driftTime.current + dt : 0;
+      if (driftTime.current > DRIFT_GOAL) unlock('drift');
       if (drive.horn && !hornHeld.current) addHonk();
       hornHeld.current = drive.horn;
       for (const id of ZONE_IDS) if (Math.hypot(pos.x - zones[id].spawn[0], pos.z - zones[id].spawn[1]) < ZONE_VISIT_RADIUS) visitZone(id);
@@ -273,6 +289,10 @@ export function Car() {
       if (shouldPark) rb.setLinvel({ x: 0, y: vel.y, z: 0 }, true);
     }
 
+    const wantsDrift = grounded && drive.brake && Math.abs(drive.steer) > 0.25 && fwdSpeed > DRIFT_MIN_SPEED;
+    drift.current += ((wantsDrift ? 1 : 0) - drift.current) * (1 - Math.exp(-(wantsDrift ? 10 : 5) * dt));
+    carState.drifting = drift.current > 0.5;
+
     if (grounded) {
       const inWater = inRiver(pos.x, pos.z);
       if (inWater) unlock('wet');
@@ -285,17 +305,24 @@ export function Car() {
       // comes to rest instead of decaying forever), strong damping when braking.
       let drag = 0;
       if (drive.throttle === 0) drag = fwdSpeed * 2.2 + Math.sign(fwdSpeed) * ROLLING_RESISTANCE;
-      if (drive.brake) drag = fwdSpeed * 6 + Math.sign(fwdSpeed) * ROLLING_RESISTANCE;
+      if (drive.brake) drag = fwdSpeed * THREE.MathUtils.lerp(6, DRIFT_LIGHT_DRAG, drift.current) + Math.sign(fwdSpeed) * ROLLING_RESISTANCE;
       if (wet) drag += fwdSpeed * WATER_DRAG;
       const along = (push - drag) * mass * dt;
       // Kill sideways sliding so the car carves instead of drifting on ice.
-      const grip = -latSpeed * Math.min(1, GRIP * dt) * mass;
+      const gripNow = THREE.MathUtils.lerp(GRIP, DRIFT_GRIP, drift.current);
+      let grip = -latSpeed * Math.min(1, gripNow * dt) * mass;
+      // however hard the drift, the slide stays within a controllable angle
+      const slipLimit = Math.max(3, Math.abs(fwdSpeed) * SLIP_LIMIT_RATIO);
+      const over = Math.abs(latSpeed) - slipLimit;
+      if (over > 0) grip -= Math.sign(latSpeed) * over * 0.6 * mass;
       if (!parked.current) rb.applyImpulse({ x: fwd.x * along + right.x * grip, y: 0, z: fwd.z * along + right.z * grip }, true);
 
       // Also settles any leftover spin from a bump while parked (turnFactor is 0 at rest).
       const turnFactor = THREE.MathUtils.clamp(fwdSpeed / 3, -1, 1);
       const angY = rb.angvel().y;
-      const targetAng = drive.steer * TURN_RATE * turnFactor;
+      // less steering at high speed (so boost stays controllable), more while drifting
+      const speedScale = 1 - STEER_FALLOFF * THREE.MathUtils.clamp((Math.abs(fwdSpeed) - 9) / 10, 0, 1);
+      const targetAng = drive.steer * TURN_RATE * turnFactor * speedScale * (1 + DRIFT_TURN_BOOST * drift.current);
       rb.setAngvel({ x: 0, y: THREE.MathUtils.lerp(angY, targetAng, Math.min(1, 12 * dt)), z: 0 }, true);
     }
 
@@ -349,11 +376,34 @@ export function Car() {
       } else {
         tmpOffset.copy(CAMERA_OFFSET).multiplyScalar(zoom * aspectZoom).applyAxisAngle(UP, orbit);
         const desired = target.clone().add(tmpOffset);
+        // A solid thing (a wall, a tower) between the car and the camera pulls the camera in along the same line.
+        const toCam = tmpCam.set(desired.x - pos.x, desired.y - 1.2, desired.z - pos.z);
+        const camDist = toCam.length();
+        const camHit = world.castRay(
+          new rapier.Ray({ x: pos.x, y: 1.2, z: pos.z }, { x: toCam.x / camDist, y: toCam.y / camDist, z: toCam.z / camDist }),
+          camDist,
+          true,
+          rapier.QueryFilterFlags.EXCLUDE_SENSORS,
+          undefined,
+          undefined,
+          rb,
+        );
+        if (camHit && camHit.timeOfImpact < camDist) {
+          const keep = Math.max(CAMERA_MIN_DIST, camHit.timeOfImpact - 0.8) / camDist;
+          desired.set(pos.x + toCam.x * keep, 1.2 + toCam.y * keep, pos.z + toCam.z * keep);
+        }
         const k = 1 - Math.exp(-(camera.position.distanceTo(desired) > 25 ? 2 : 4) * dt);
         camera.position.lerp(desired, k);
         lookAt.current.lerp(target, k);
         camera.lookAt(lookAt.current);
       }
+    }
+    // The view widens a little with speed (not with reduced motion).
+    const cam = camera as THREE.PerspectiveCamera;
+    const fovTarget = still || !started ? BASE_FOV : BASE_FOV + FOV_EXTRA * THREE.MathUtils.clamp((Math.abs(fwdSpeed) - 8) / 11, 0, 1);
+    if (Math.abs(cam.fov - fovTarget) > 0.02) {
+      cam.fov = THREE.MathUtils.lerp(cam.fov, fovTarget, 1 - Math.exp(-3 * dt));
+      cam.updateProjectionMatrix();
     }
     // Short decaying jolt after a hard crash; the follow lerp above pulls the camera back next frame.
     if (shake.current > 0.01 && !still) {
@@ -379,6 +429,7 @@ export function Car() {
       brake: drive.brake,
       grounded,
       horn: drive.horn,
+      slip: latSpeed,
       dt,
     });
   });

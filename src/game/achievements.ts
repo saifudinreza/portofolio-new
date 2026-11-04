@@ -7,7 +7,7 @@ import type { CarSkin } from '../world/layout';
 
 export type AchievementId =
   | 'all-projects' | 'all-zones' | 'open-live' | 'airtime' | 'jumper' | 'speed' | 'wet' | 'honk' | 'abyss' | 'classic'
-  | 'circuit' | 'circuit-fast';
+  | 'circuit' | 'circuit-fast' | 'drift';
 
 export type Achievement = {
   id: AchievementId;
@@ -25,6 +25,8 @@ export const HONK_GOAL = 20;
 /** Boost top speed is 19 m/s; the car needs a moment of full boost on flat ground to get this close. */
 export const SPEED_GOAL = 18;
 export const AIRTIME_GOAL = 1.2;
+/** One unbroken drift this long (seconds) unlocks the drift achievement. */
+export const DRIFT_GOAL = 2;
 /** Time-trial target. A first estimate from the lap length (about 100 m with a U-turn); tune after playing. */
 export const CIRCUIT_FAST_SECONDS = 18;
 
@@ -40,6 +42,7 @@ export const ACHIEVEMENTS: Achievement[] = [
   { id: 'abyss', title: 'Edge of the world', description: 'Fall off the island.', secret: true },
   { id: 'classic', title: 'Recruiter mode', description: 'Open the classic view.' },
   { id: 'circuit', title: 'Lap of honour', description: 'Finish a time-trial lap: drive through the START gate on the Skills road.' },
+  { id: 'drift', title: 'Sideways', description: `Drift for ${DRIFT_GOAL} seconds in one go: hold B or Ctrl and steer at speed.` },
   { id: 'circuit-fast', title: 'Speed demon', description: `Finish a lap in under ${CIRCUIT_FAST_SECONDS} seconds.` },
 ];
 

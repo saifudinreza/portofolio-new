@@ -357,6 +357,7 @@ export function TouchControls() {
         <div className="pad-extras">
           <button aria-label="Jump" className="round jump" {...hold('jump')}><JumpIcon /></button>
           <button aria-label="Horn" className="round horn" {...hold('horn')}><HornIcon /></button>
+          <button aria-label="Drift" className="round drift" {...hold('brake')}>Drift</button>
           <button aria-label="Boost" className="round boost" {...hold('boost')}><BoostIcon /></button>
         </div>
         {mode === 'buttons' && (

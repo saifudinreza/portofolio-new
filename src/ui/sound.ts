@@ -314,7 +314,7 @@ function createEngine(c: AudioContext, dest: AudioNode) {
   let horn = false;
 
   return {
-    update(s: { x: number; y: number; z: number; speed: number; throttle: number; boost: boolean; brake: boolean; grounded: boolean; horn: boolean; dt: number }) {
+    update(s: { x: number; y: number; z: number; speed: number; throttle: number; boost: boolean; brake: boolean; grounded: boolean; horn: boolean; slip: number; dt: number }) {
       const now = c.currentTime;
       const load = Math.abs(s.throttle);
       const boost = s.boost && load > 0 ? 1 : 0;
@@ -336,7 +336,7 @@ function createEngine(c: AudioContext, dest: AudioNode) {
       setParam(whine.frequency, 1100 + rpm * 0.35, now);
       setParam(whineGain.gain, boost * 0.01, now, 0.4);
 
-      const skidding = s.brake && s.grounded && Math.abs(s.speed) > 2;
+      const skidding = s.grounded && ((s.brake && Math.abs(s.speed) > 2) || Math.abs(s.slip) > 2.2);
       setParam(skidGain.gain, skidding ? Math.min(Math.abs(s.speed) / 10, 1) * 0.11 : 0, now, skidding ? 0.08 : 0.12);
       setParam(skidFilter.frequency, 1300 + Math.abs(s.speed) * 25, now);
 

@@ -33,7 +33,7 @@
 | 1 — Stability | ISSUE-014, 020 | IN PROGRESS (PR open) | #32 |
 | 2 — Visual overhaul | ISSUE-001 to 003 (2a-2d) | IN PROGRESS: 2a-2c done; 2d PR open | #33 (2a), #34 (2b), #35 (2c), #36 (2d) |
 | 3 — Performance | ISSUE-017, 018, 016 | IN PROGRESS: leak audit done, FPS pengukuran menunggu pemilik | #37 |
-| 4 — Driving | ISSUE-004 to 007 | TODO | #38 |
+| 4 — Driving | ISSUE-004 to 007 | DONE kecuali playtest manusia | #38 |
 | 5 — Portfolio | ISSUE-008 to 009 | TODO | #39 |
 | 6 — Exploration | ISSUE-010 to 013 | TODO | #40 |
 | 7 — Device testing | ISSUE-019, 020 | TODO | #41 |
@@ -162,6 +162,13 @@ _Add reproducible bugs, blockers, and relevant browser/device details here._
 - **Kebocoran kecil yang tersisa:** +1 tekstur GPU (kecil) setiap kali tier naik dari Low ke Medium (tidak terjadi Medium ↔ High). Bukan `scene.environment` (sudah dicoba dibuang, tidak berpengaruh); kemungkinan di dalam drei `Environment`. Diabaikan: auto-quality hanya flip-flop maksimum 4 kali lalu berhenti.
 - **Pemecahan chunk dicoba dan dibatalkan:** `manualChunks` (three / r3f / rapier) membuat `index.html` memuat `physics-wasm` (842 kB gzip) dan `r3f` (479 kB gzip) lebih dulu lewat modulepreload, merusak pemuatan malas (halaman awal tidak boleh mengunduh 3D). Rapier + WASM base64 ternyata bagian terbesar chunk Scene (±2,2 MB dari 3,5 MB). Ukuran total gzip tidak berubah, jadi tidak dipakai.
 - **Menunggu pemilik:** FPS di GPU asli (Low/Medium/High di Home, Projects, sungai; desktop dan HP) lewat `?stats`, lalu optimasi yang terbukti (instancing zona, bayangan benda kecil).
+
+### 2026-11-04 (M4 / #38)
+- **Bug "mobil bergerak sendiri":** pelatuk gamepad (`value(7) - value(6)`) tanpa dead zone membuat throttle tidak nol saat nilai istirahat 0,04: rem parkir tidak aktif dan tidak ada hambatan gelinding, jadi mobil merayap lalu terus berakselerasi. Perbaikan di `store.ts`: dead zone pelatuk 0,1; throttle di bawah 0,1 dan steer di bawah 0,05 dianggap 0. Diuji headless dengan gamepad palsu: pelatuk 0,05 dan stick 0,1 membuat mobil diam 12 dtk (0,00 m, parked); pelatuk penuh tetap menjalankan mobil.
+- **Drift:** tahan rem (B / Ctrl / gamepad B / tombol sentuh Drift) sambil belok di atas 6 m/s. Grip samping turun (10 menjadi 1,8), belok +15%, hambatan rem ringan; selip dibatasi 0,55 kali kecepatan maju (sekitar 33 derajat); grip kembali sekitar 0,4 dtk setelah dilepas. Steering berkurang 35% di kecepatan tertinggi. Achievement "Sideways" (drift 2 dtk berturut-turut).
+- **Kamera:** FOV 38 menjadi 42 menurut kecepatan (tidak dengan reduced motion); raycast dari mobil ke kamera menarik kamera mendekat bila ada benda padat di antaranya (minimum 6 m).
+- **Suara dan efek:** suara ban mengikuti selip, tidak hanya rem (jejak ban sudah memakai selip).
+- **Verifikasi:** simulasi numerik 60 Hz dengan rumus yang sama (di luar Rapier karena simulasi headless hanya sekitar 1 FPS): drift stabil di kecepatan normal dan boost, tanpa spin, counter-steer bekerja, rem lurus tidak drift. Rasa berkendara di keyboard, sentuh, dan gamepad belum dites manusia.
 
 ### 2026-11-04 (M2d / #36)
 - `docs/art-direction.md` (baru): palet dengan hex, aturan material, mood cahaya per waktu, checklist aset baru.

@@ -41,6 +41,7 @@ export function terrainGeometry(heights: number[]) {
     }
   }
   // skirt: one strip down each side, drawn from both sides so the winding does not matter
+  const skirtStart = pos.length / 3;
   const edges: [number, number][][] = [
     Array.from({ length: n + 1 }, (_, i) => [i, 0] as [number, number]),
     Array.from({ length: n + 1 }, (_, i) => [i, n] as [number, number]),
@@ -61,5 +62,15 @@ export function terrainGeometry(heights: number[]) {
   g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
   g.setIndex(index);
   g.computeVertexNormals();
+  // Drawn from both sides, the skirt's two windings cancel out in computeVertexNormals and leave zero-length
+  // normals. The shader's normalize() turns those into NaN pixels, and on High the bloom smears one NaN pixel over
+  // the whole screen: the black flashes along the island's edge (#73). Point every skirt vertex straight outwards.
+  const normal = g.getAttribute('normal');
+  const outward: [number, number][] = [[0, -1], [0, 1], [-1, 0], [1, 0]];
+  const perEdge = (n + 1) * 2;
+  for (let i = skirtStart; i < normal.count; i++) {
+    const [nx, nz] = outward[Math.floor((i - skirtStart) / perEdge)];
+    normal.setXYZ(i, nx, 0, nz);
+  }
   return g;
 }

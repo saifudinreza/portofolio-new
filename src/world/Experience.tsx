@@ -15,10 +15,8 @@ import { P } from './StatsPart';
 const PostFx = lazy(() => import('./PostFx').then((m) => ({ default: m.PostFx })));
 
 /**
- * Auto quality: drei's PerformanceMonitor averages the frame rate over about 5 s and steps the tier down once if
- * it sits under 48 FPS. It never steps back up and then stops watching: every tier change swaps the pixel ratio,
- * shadows, reflections and post-processing, which blanks the screen and recompiles shaders. Going up and down
- * while driving along the island's edge (the heaviest view) made the screen flash black over and over.
+ * Auto quality: drei's PerformanceMonitor averages the frame rate and steps the tier down when it sits
+ * under 48 FPS, up when it holds above 58. After a few back-and-forths it settles on the lower tier.
  */
 function AutoQuality() {
   const auto = useStore((s) => s.quality === 'auto');
@@ -28,10 +26,11 @@ function AutoQuality() {
   if (!auto || !started || settled) return null;
   return (
     <PerformanceMonitor
-      bounds={() => [48, 120]}
-      ms={250}
-      iterations={20}
-      onDecline={() => {
+      bounds={() => [48, 58]}
+      flipflops={4}
+      onDecline={() => stepTier(-1)}
+      onIncline={() => stepTier(1)}
+      onFallback={() => {
         setSettled(true);
         stepTier(-1);
       }}
